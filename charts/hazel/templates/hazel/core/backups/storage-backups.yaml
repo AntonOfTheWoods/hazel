@@ -1,65 +1,65 @@
-{{- if and .Values.openedx.enabled .Values.openedx.backups.media.enabled -}}
+{{- if and .Values.hazel.enabled .Values.hazel.backups.media.enabled -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: openedx-media-backup
+  name: hazel-media-backup
   annotations:
-    {{- include "openedx.annotations" . | nindent 4 }}
+    {{- include "hazel.annotations" . | nindent 4 }}
   labels:
-    {{- include "openedx.componentLabels" (dict "component" "backups" "root" .) | nindent 4 }}
+    {{- include "hazel.componentLabels" (dict "component" "backups" "root" .) | nindent 4 }}
 
 spec:
-  {{- if .Values.openedx.backups.media.strategy }}
+  {{- if .Values.hazel.backups.media.strategy }}
   strategy:
-{{ toYaml .Values.openedx.backups.media.strategy | indent 4 }}
+{{ toYaml .Values.hazel.backups.media.strategy | indent 4 }}
   {{- end }}
   # TODO: must this be one?
   replicas: 1
   selector:
     matchLabels:
-      {{- include "openedx.componentSelectorLabels" (dict "component" "backups" "root" .) | nindent 6 }}
+      {{- include "hazel.componentSelectorLabels" (dict "component" "backups" "root" .) | nindent 6 }}
 
   template:
     metadata:
       annotations:
-        {{- include "openedx.annotations" . | nindent 8 }}
+        {{- include "hazel.annotations" . | nindent 8 }}
       labels:
-        {{- include "openedx.componentLabels" (dict "component" "backups" "root" .) | nindent 8 }}
+        {{- include "hazel.componentLabels" (dict "component" "backups" "root" .) | nindent 8 }}
     spec:
       restartPolicy: Always
 
-      {{- if .Values.openedx.isDev }}
+      {{- if .Values.hazel.isDev }}
       initContainers:
-      {{- include "openedx.dev.mcCaInitContainer" . | nindent 6 }}
+      {{- include "hazel.dev.mcCaInitContainer" . | nindent 6 }}
       {{- end }}
 
       containers:
         - name: mc-mirror
-          image: {{ include "openedx.image" (dict "component" "backups" "root" .) }}
-          imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "backups" "root" .) }}
+          image: {{ include "hazel.image" (dict "component" "backups" "root" .) }}
+          imagePullPolicy: {{ include "hazel.imagePullPolicy" (dict "component" "backups" "root" .) }}
 
           env:
             - name: S3_ACCESS_KEY_DESTINATION
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.openedx.backups.media.destination.accessKey.secretName }}
-                  key: {{ .Values.openedx.backups.media.destination.accessKey.secretKey }}
+                  name: {{ .Values.hazel.backups.media.destination.accessKey.secretName }}
+                  key: {{ .Values.hazel.backups.media.destination.accessKey.secretKey }}
             - name: S3_SECRET_KEY_DESTINATION
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.openedx.backups.media.destination.secretKey.secretName }}
-                  key: {{ .Values.openedx.backups.media.destination.secretKey.secretKey }}
+                  name: {{ .Values.hazel.backups.media.destination.secretKey.secretName }}
+                  key: {{ .Values.hazel.backups.media.destination.secretKey.secretKey }}
 
             - name: S3_ACCESS_KEY_SOURCE
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.openedx.s3.accessKey.secretName }}
-                  key: {{ .Values.openedx.s3.accessKey.secretKey }}
+                  name: {{ .Values.hazel.s3.accessKey.secretName }}
+                  key: {{ .Values.hazel.s3.accessKey.secretKey }}
             - name: S3_SECRET_KEY_SOURCE
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.openedx.s3.secretKey.secretName }}
-                  key: {{ .Values.openedx.s3.secretKey.secretKey }}
+                  name: {{ .Values.hazel.s3.secretKey.secretName }}
+                  key: {{ .Values.hazel.s3.secretKey.secretKey }}
 
             # mc needs a writable config directory; default ($HOME/.mc) is not writable with readOnlyRootFilesystem.
             - name: MC_CONFIG_DIR
@@ -81,13 +81,13 @@ spec:
               echo "Using MC_CONFIG_DIR=${MC_CONFIG_DIR}";
 
               echo "Configuring aliases..."
-              mc alias set s3-source {{ printf "%s://%s:%v" (ternary "https" "http" .Values.openedx.s3.useSSL) .Values.openedx.s3.host (.Values.openedx.s3.port | int) | quote }} "$S3_ACCESS_KEY_SOURCE" "$S3_SECRET_KEY_SOURCE"
-              mc alias set s3-dest {{ printf "%s://%s:%v" (ternary "https" "http" .Values.openedx.backups.media.destination.useSSL) .Values.openedx.backups.media.destination.host (.Values.openedx.backups.media.destination.port | int) | quote }} "$S3_ACCESS_KEY_DESTINATION" "$S3_SECRET_KEY_DESTINATION"
+              mc alias set s3-source {{ printf "%s://%s:%v" (ternary "https" "http" .Values.hazel.s3.useSSL) .Values.hazel.s3.host (.Values.hazel.s3.port | int) | quote }} "$S3_ACCESS_KEY_SOURCE" "$S3_SECRET_KEY_SOURCE"
+              mc alias set s3-dest {{ printf "%s://%s:%v" (ternary "https" "http" .Values.hazel.backups.media.destination.useSSL) .Values.hazel.backups.media.destination.host (.Values.hazel.backups.media.destination.port | int) | quote }} "$S3_ACCESS_KEY_DESTINATION" "$S3_SECRET_KEY_DESTINATION"
 
               # Destination bucket path
-              DEST_BUCKET="s3-dest/{{ required "openedx.backups.media.destination.bucketName is required" .Values.openedx.backups.media.destination.bucketName }}"
+              DEST_BUCKET="s3-dest/{{ required "hazel.backups.media.destination.bucketName is required" .Values.hazel.backups.media.destination.bucketName }}"
               # Source path (bucket or prefix)
-              SRC_PATH="s3-source/{{ dig "source" "bucketName" "" .Values.openedx.backups.media }}"
+              SRC_PATH="s3-source/{{ dig "source" "bucketName" "" .Values.hazel.backups.media }}"
 
               echo "Ensuring destination bucket exists..."
               if ! mc ls "${DEST_BUCKET}" >/dev/null 2>&1; then
@@ -112,7 +112,7 @@ spec:
               command:
                 - /bin/sh
                 - -c
-                - mc ls s3-source/{{ dig "source" "bucketName" "" .Values.openedx.backups.media }} >/dev/null 2>&1
+                - mc ls s3-source/{{ dig "source" "bucketName" "" .Values.hazel.backups.media }} >/dev/null 2>&1
             initialDelaySeconds: 30
             periodSeconds: 60
           readinessProbe:
@@ -120,7 +120,7 @@ spec:
               command:
                 - /bin/sh
                 - -c
-                - mc ls s3-dest/{{ required "openedx.backups.media.destination.bucketName is required" .Values.openedx.backups.media.destination.bucketName }} >/dev/null 2>&1
+                - mc ls s3-dest/{{ required "hazel.backups.media.destination.bucketName is required" .Values.hazel.backups.media.destination.bucketName }} >/dev/null 2>&1
             initialDelaySeconds: 15
             periodSeconds: 30
           securityContext:
@@ -135,7 +135,7 @@ spec:
         fsGroup: 1000
       terminationGracePeriodSeconds: 30
       volumes:
-        {{- if .Values.openedx.isDev }}
+        {{- if .Values.hazel.isDev }}
         - name: ca-bundle
           configMap:
             name: mkcert-trust-bundle

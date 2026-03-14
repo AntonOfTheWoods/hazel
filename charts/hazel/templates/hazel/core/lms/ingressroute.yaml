@@ -82,39 +82,5 @@ spec:
     {{- include "openedx.ingressroute.tlsname" (dict "component" "lms" "root" .) | nindent 4 }}
 ---
 {{- include "openedx.ingressroute.tlscertificate" (dict "component" "lms" "root" .) }}
----
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
-metadata:
-  name: lms-ingressroute-preview
-  annotations:
-    {{- include "openedx.annotations" . | nindent 4 }}
-spec:
-  entryPoints:
-    - websecure
-  routes:
-  - match: Host(`{{ .Values.openedx.preview.host }}`) && PathPrefix(`/api/profile_images`)
-    kind: Rule
-    middlewares:
-    - name: favicon-rewrite
-    - name: profile-upload-limit
-    services:
-    - name: {{ .Values.openedx.lms.service.name | default "lms" }}
-      port: {{ .Values.openedx.lms.service.port | default 8000 }}
-  - match: Host(`{{ .Values.openedx.preview.host }}`)
-    kind: Rule
-    middlewares:
-    - name: favicon-rewrite
-    - name: default-body-limit
-    - name: add-headers
-    - name: compress-gzip
-    - name: cors-allowed-origins
-    services:
-    - name: {{ .Values.openedx.lms.service.name | default "lms" }}
-      port: {{ .Values.openedx.lms.service.port | default 8000 }}
-  tls:
-    {{- include "openedx.ingressroute.tlsname" (dict "component" "preview" "root" .) | nindent 4 }}
----
-{{- include "openedx.ingressroute.tlscertificate" (dict "component" "preview" "root" .) }}
 
 {{- end -}}
