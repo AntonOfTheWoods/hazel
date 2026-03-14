@@ -1,0 +1,34 @@
+apiVersion: v2
+name: openedx-infra
+description: A Helm chart for Open edX platform infrastructure
+type: application
+version: 0.1.0
+appVersion: "v1"
+keywords:
+  - openedx
+  - k3d
+  - kubernetes
+  - helm
+home: https://github.com/AntonOfTheWoods/ohelmx
+sources:
+  - https://github.com/AntonOfTheWoods/ohelmx
+maintainers:
+  - name: Anton MELSER
+    url: https://github.com/AntonOfTheWoods/ohelmx
+
+dependencies:
+  - name: tenant
+    version: "7.x.x"
+    repository: "https://operator.min.io/"
+    alias: minio
+    condition: minio.enabled
+
+  - name: meilisearch
+    version: "0.17.x"
+    repository: "https://meilisearch.github.io/meilisearch-kubernetes/"
+    condition: meilisearch.enabled
+
+  - name: redis
+    version: "0.16.x"
+    repository: "https://ot-container-kit.github.io/helm-charts/"
+    condition: redis.enabled

@@ -14,11 +14,4 @@ sources:
   - https://github.com/HazelChat/hazel
 maintainers:
   - name: Anton MELSER
-    url: https://github.com/HazelChat/hazel
-
-dependencies:
-  - name: tenant
-    version: "7.x.x"
-    repository: "https://operator.min.io/"
-    alias: minio
-    condition: minio.enabled
+    url: https://github.com/AntonOfTheWoods

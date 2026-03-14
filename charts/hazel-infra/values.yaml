@@ -1,0 +1,297 @@
+global:
+  namespace: openedx
+  openedxVersion: "20.0.1-main"
+  instanceId: "openedx-instance"
+  redirectHttp: true
+
+project:
+  local:
+    enabled: false
+    enableNodePorts: false
+# .Values.openedx.certManager.issuers
+openedx:
+  isDev: false
+  dev:
+    files:
+      lbIP: ""
+    backups:
+      lbIP: ""
+
+  certManager:
+    issuers: []
+      # - server: https://acme-staging-v02.api.letsencrypt.org/directory
+      #   name: "letsencrypt-staging"
+      #   kind: "Issuer"
+      #   email: "certs@local.openedx.io"
+      #   privateKeySecretRef: "le-key-staging"
+      # - server: https://acme-v02.api.letsencrypt.org/directory
+      #   name: "letsencrypt-prod"
+      #   kind: "Issuer"
+      #   email: "certs@local.openedx.io"
+      #   privateKeySecretRef: "le-key-prod"
+
+# Common labels and annotations
+commonLabels:
+  app.kubernetes.io/part-of: openedx
+  # app.kubernetes.io/managed-by: Helm
+  # Additional common labels can be added here
+
+commonAnnotations: {}
+  # App version annotation will be automatically added
+  # Additional annotations can be added here
+
+db:
+  enabled: true
+  backups:
+    enabled: true
+    schedule: "0 30 2 * * *"  # At 02:30:00 (UTC) every day
+    retention: 7d          # keep 7 backups
+    barmanObjectName: s3-store-db
+    destinationPath: "openedx-db-backups"
+    host: backups.local.openedx.io
+    port: 80
+    useSSL: false
+    walCompression: bzip2  # bzip2;gzip;lz4;snappy;xz;zstd
+    dataCompression: bzip2  # bzip2;gzip;snappy
+    s3Credentials:
+      accessKeyId:
+        name: s3-backups
+        key: username
+      secretAccessKey:
+        name: s3-backups
+        key: password
+
+  cluster:
+    enabled: true
+    name: db-cluster
+    instances: 1
+    image:
+      repository: "ghcr.io/cloudnative-pg/postgresql"
+      tag: "18-standard-trixie"
+      pullPolicy: IfNotPresent
+    superuser:
+      credentials: db-super-credentials
+    user:
+      credentials: openedx-db-credentials
+    storage:
+      size: 5Gi
+
+    managed:
+      services:
+        disabledDefaultServices: ["ro", "r"]
+
+    # To bootstrap a new database (needs db-migratejob.yaml afterwards)
+    bootstrap:
+      enabled: true
+      dbName: openedx
+      dbOwner: openedx
+      recovery:
+        # To restore from a backup
+        # backupSource: true
+        barmanObjectName: s3-store-db
+
+    walArchive:
+      enabled: true
+      barmanObjectName: s3-store-db
+
+    extraRoles: []
+      # example:
+      # - name: notes
+      #   ensure: present
+      #   comment: "OpenedX Application User"
+      #   login: true
+      #   createdb: true
+      #   createrole: false
+      #   replication: false
+      #   bypassrls: false
+      #   passwordSecret:
+      #     name: notes-db-credentials
+
+ferretdb:
+  enabled: true
+  application:
+    image:
+      repository: ghcr.io/ferretdb/ferretdb
+      tag: 2.7.0
+      pullPolicy: IfNotPresent
+    port: 27017
+  service:
+    name: mongodb
+    type: ClusterIP
+    port: 27017
+  auth: "true" # "true" or "false", whether to enable authentication in FerretDB
+  backups:
+    enabled: true
+    schedule: "0 0 2 * * *"  # At 02:00:00 (UTC) every day
+    retention: "7d"           # keep 7 backups
+    barmanObjectName: s3-store-documentdb
+    destinationPath: "openedx-documentdb-backups"
+    host: backups.local.openedx.io
+    port: 80
+    useSSL: false
+    walCompression: bzip2  # bzip2;gzip;lz4;snappy;xz;zstd
+    dataCompression: bzip2  # bzip2;gzip;snappy
+    s3Credentials:
+      accessKeyId:
+        name: s3-backups
+        key: username
+      secretAccessKey:
+        name: s3-backups
+        key: password
+
+  cluster:
+    enabled: true
+    name: documentdb-cluster
+    instances: 1
+    image:
+      repository: "ghcr.io/ferretdb/postgres-documentdb"
+      tag: "17-0.107.0-ferretdb-2.7.0"
+      pullPolicy: IfNotPresent
+    superuser:
+      credentials: documentdb-super-credentials
+    user:
+      credentials: documentdb-db-credentials
+
+    storage:
+      size: 5Gi
+
+    managed:
+      services:
+        disabledDefaultServices: ["ro", "r"]
+
+    # # To bootstrap a new database
+    bootstrap:
+      enabled: true
+      dbName: ferretdb
+      dbOwner: ferret
+      recovery:
+        # To restore from a backup
+        # backupSource: true
+        barmanObjectName: "s3-store-documentdb"
+
+    walArchive:
+      enabled: true
+      barmanObjectName: s3-store-documentdb
+
+    extraRoles: []
+      # example:
+      # - name: notes
+      #   ensure: present
+      #   comment: "OpenedX Application User"
+      #   login: true
+      #   createdb: true
+      #   createrole: false
+      #   replication: false
+      #   bypassrls: false
+      #   passwordSecret:
+      #     name: notes-db-credentials
+
+meilisearch:
+  enabled: true
+  environment:
+    MEILI_NO_ANALYTICS: true
+    # DO NOT CHANGE THE FOLLOWING LINE UNLESS YOU KNOW WHAT YOU ARE DOING!
+    MEILI_ENV: production
+  service:
+    type: ClusterIP
+    port: 7700
+  auth:
+    # DO NOT CHANGE THE FOLLOWING LINE UNLESS YOU KNOW WHAT YOU ARE DOING!
+    # The secret must contain the key: MEILI_MASTER_KEY
+    existingMasterKeySecret: "meili-master"
+
+  ingress:
+    enabled: true
+    className: "traefik"
+    annotations: {}
+    path: /
+    hosts:
+      - meilisearch.local.openedx.io
+    tls: []
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - chart-example.local
+
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    # storageClass: ~
+    existingClaim: ""
+    size: 5Gi
+
+minio:
+  enabled: true
+  extendedOperator:
+    # Set this to create a user for OpenedX to use for storage
+    # The secret with this name must exist and contain keys `secretKey`
+    # You can use the provided `ok3dx/kube/k3d-deploy/secrets/openedx-infra/s3-storage.json` to create such a secret
+    user:
+      name: s3-storage
+      secretName: s3-storage
+      secretKeyName: password
+
+    buckets:
+      - name: openedx
+        versioning: true
+      - name: openedxuploads
+        versioning: true
+      - name: openedxgrades
+        versioning: true
+      - name: openedxprofiles
+        versioning: true
+      - name: public
+        versioning: true
+        public: true
+    extraBuckets: []
+      # example:
+      # - name: extra-bucket
+      #   versioning: false
+
+  # see https://github.com/minio/operator/blob/master/helm/tenant/templates/tenant.yaml
+  tenant:
+    name: minio-storage
+    exposeServices:
+      minio: false
+      console: false
+
+    # DO NOT SET BUCKETS HERE! They are NOT managed by this operator - see extendedOperator above!
+    # buckets: []
+
+    configSecret:
+      name: minio-env
+      existingSecret: true
+
+    certificate:
+      requestAutoCert: false
+
+    # pools:
+    #   - servers: 1
+    #     name: pool-0
+    #     volumesPerServer: 1
+    #     size: 5Gi
+
+  ingress:
+    api:
+      enabled: false
+      ingressClassName: "traefik"
+      labels: { }
+      annotations: { }
+      tls: [ ]
+      host: files.local.openedx.io
+      path: /
+      pathType: Prefix
+    console:
+      enabled: false
+      ingressClassName: "traefik"
+      labels: { }
+      annotations: { }
+      tls: [ ]
+      host: minio-console.local.openedx.io
+      path: /
+      pathType: Prefix
+
+redis:
+  enabled: true
+  redisStandalone:
+    name: redis  # apparently MUST be set or it will default to the release name
+    tag: "v7.4.5"
