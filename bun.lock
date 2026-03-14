@@ -14,7 +14,7 @@
         "turbo": "^2.8.16",
         "typescript": "^5.9.3",
         "vitest": "^4.1.0",
-        "web": "^0.0.2",
+        "web": "workspace:*",
         "wrangler": "^4.73.0",
       },
     },
