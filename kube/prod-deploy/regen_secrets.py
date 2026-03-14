@@ -20,7 +20,7 @@ import secrets
 import string
 
 USE_CL_OPENSSL = False
-ANNOTATION_KEY_PREFIX = 'ok3dx/pwgen'
+ANNOTATION_KEY_PREFIX = 'hazel/pwgen'
 
 
 try:
@@ -50,9 +50,6 @@ def rsa_private_key(bits: int = 2048):
 def uid_master_hash(master_key: str, uid: str) -> str:
     """
     Hash a key UID and master key to generate an API key
-
-    This is used specifically for meilisearch.
-    Source: https://www.meilisearch.com/docs/reference/api/keys#key
     """
     return hmac.new(master_key.encode(), uid.encode(), hashlib.sha256).hexdigest()
 

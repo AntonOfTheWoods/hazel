@@ -9,7 +9,7 @@ kubeAPI:
 
 registries: # define how registries should be created or used
   create: # creates a default registry to be used with the cluster; same as `--registry-create registry.localhost`
-    name: registry.ok3dx.local.openedx.io
+    name: registry.hazel.localhost
     host: "0.0.0.0"
     hostPort: "5001"
 
@@ -25,7 +25,7 @@ ports:
   - port: 30432:30432
     nodeFilters:
       - loadbalancer
-  # mongodb/ferretdb
+  # ???
   - port: 30433:30433
     nodeFilters:
       - loadbalancer
@@ -33,11 +33,11 @@ ports:
   - port: 30434:30434
     nodeFilters:
       - loadbalancer
-  # minio
+  # garage service
   - port: 30435:30435
     nodeFilters:
       - loadbalancer
-  # meilisearch
+  # ???
   - port: 30436:30436
     nodeFilters:
       - loadbalancer

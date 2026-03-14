@@ -17,7 +17,7 @@ export BACKUPS_CLUSTERNAME=hazel-backups
 export MAIN_CONTEXT=k3d-${CLUSTERNAME}
 export BACKUPS_CONTEXT=k3d-${BACKUPS_CLUSTERNAME}
 export NETWORK=k3d-${CLUSTERNAME}
-
+export NETWORK_ROOT=172.18.0
 export CONTAINER_USER_ID=1001
 export K3S_IMAGE_NAME=docker.io/rancher/k3s:v1.35.2-k3s1
 export GIT_VERSION=$(git describe --tags)

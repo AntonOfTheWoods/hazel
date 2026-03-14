@@ -1,13 +1,13 @@
-{{- if and .Values.openedx.enabled .Values.openedx.isDev -}}
+{{- if and .Values.hazel.enabled .Values.hazel.isDev -}}
 #  localRoutes:
 #    - name: mypath
 #      path: /mypath
 #      suppressPath: false
 #      port: 5001
 {{- $root := . -}}
-{{- $sections := list "mfe" "lms" "cms" "notes" }}
+{{- $sections := list "web" "botgateway" "docs" "cluster" "backend" "electricProxy" "landing" "actors" }}
 {{- range $section := $sections }}
-{{- $routes := index $root.Values.openedx $section "localRoutes" }}
+{{- $routes := index $root.Values.hazel $section "localRoutes" }}
 {{- range $route := $routes }}
 {{- if $route.suppressPath }}
 ---
@@ -26,7 +26,7 @@ kind: Service
 metadata:
   name: external-{{ $section }}-{{ $route.name }}
   annotations:
-    {{- include "openedx.annotations" $ | nindent 4 }}
+    {{- include "hazel.annotations" $ | nindent 4 }}
 spec:
   type: ExternalName
   externalName: host.k3d.internal

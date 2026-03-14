@@ -26,7 +26,7 @@ EXISTING_NETWORK=$(docker network ls | grep " ${NETWORK} " || [[ $? == 1 ]])
 if [ -z "${EXISTING_NETWORK}" ]; then
   echo "Network ${NETWORK} not found, creating"
   # docker network create --opt com.docker.network.driver.mtu=1400 ${NETWORK}
-  docker network create --opt com.docker.network.driver.mtu=1400 --driver bridge --subnet 172.18.0.0/24 --gateway 172.18.0.1 ${NETWORK}
+  docker network create --opt com.docker.network.driver.mtu=1400 --driver bridge --subnet ${NETWORK_ROOT}.0/24 --gateway ${NETWORK_ROOT}.1 ${NETWORK}
 fi
 
 REGISTRY_CONFIG_FILE=${SCRIPT_DIR}/registries.yaml
@@ -38,7 +38,7 @@ else
 fi
 
 if [ -z "${K3S_IMAGE_NAME}" ]; then
-  K3S_IMAGE="--image docker.io/rancher/k3s:v1.34.2-k3s1"
+  K3S_IMAGE="--image docker.io/rancher/k3s:v1.35.2-k3s1"
 else
   K3S_IMAGE="--image ${K3S_IMAGE_NAME}"
 fi
@@ -47,13 +47,11 @@ echo "Creating cluster with image: ${K3S_IMAGE}"
 
 mkdir -p ~/.kube
 
-k3d cluster create ${CLUSTERNAME} --config ${SCRIPT_DIR}/k3d-ok3dx-config.yml \
+k3d cluster create ${CLUSTERNAME} --config ${SCRIPT_DIR}/k3d-config.yml \
   ${K3S_IMAGE} ${REGISTRY_CONFIG} \
   --network ${NETWORK} \
   --k3s-arg "--kube-controller-manager-arg=node-cidr-mask-size-ipv4=21@server:*" \
   --volume ${SCRIPT_DIR}/volumes:/opt/${APPNAME}/volumes@all \
-  --volume ${SCRIPT_DIR}/../../workspaces:/workspaces@all \
-  --volume ${SCRIPT_DIR}/../../workspaces/apps/edx-platform:/openedx/edx-platform@all \
   --volume ${SCRIPT_DIR}/../../workspaces/mnt:/mnt@all
 
 # TODO: put this back when we have a better solution for local volumes
@@ -75,9 +73,9 @@ echo -e "apiVersion: v1\nkind: Namespace\nmetadata:\n  name: ${INGRESS_NAMESPACE
 echo -e "apiVersion: v1\nkind: Namespace\nmetadata:\n  name: cert-manager" | kubectl apply --context ${MAIN_CONTEXT} -f -
 
 echo '--- Applying secrets'
-kubectl --context ${MAIN_CONTEXT} -n ${NAMESPACE} apply -f ${SCRIPT_DIR}/secrets/openedx/
-kubectl --context ${MAIN_CONTEXT} -n ${NAMESPACE} apply -f ${SCRIPT_DIR}/secrets/openedx-infra/
-kubectl --context ${MAIN_CONTEXT} -n ${NAMESPACE} apply -f ${SCRIPT_DIR}/secrets/openedx-shared/
+kubectl --context ${MAIN_CONTEXT} -n ${NAMESPACE} apply -f ${SCRIPT_DIR}/secrets/hazel/
+kubectl --context ${MAIN_CONTEXT} -n ${NAMESPACE} apply -f ${SCRIPT_DIR}/secrets/hazel-infra/
+kubectl --context ${MAIN_CONTEXT} -n ${NAMESPACE} apply -f ${SCRIPT_DIR}/secrets/hazel-shared/
 
 mkcert -install
 export CAROOT=$(mkcert -CAROOT)
@@ -91,7 +89,7 @@ echo '--- Automatic secrets generation finished (for development ONLY)'
 export LB_IP=$(docker network inspect ${NETWORK} | jq -r ".[].Containers[] | select(.Name == \"k3d-${CLUSTERNAME}-serverlb\") | .IPv4Address | split(\"/\")[0]")
 export GATEWAY_IP=$(docker network inspect ${NETWORK} | jq -r ".[].IPAM.Config[0].Gateway")
 export BACKUPS_LB_IP=$(docker network inspect ${NETWORK} | jq -r ".[].Containers[] | select(.Name == \"k3d-${BACKUPS_CLUSTERNAME}-serverlb\") | .IPv4Address | split(\"/\")[0]")
-export MINIO_HOST=files.${LOCALHOST_NAME}
+export S3_HOST=files.${LOCALHOST_NAME}
 export BACKUPS_HOST=backups.${LOCALHOST_NAME}
 
 echo "Load balancer IP address detected: ${LB_IP}, backups LB IP: ${BACKUPS_LB_IP}"

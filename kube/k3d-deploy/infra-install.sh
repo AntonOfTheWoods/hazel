@@ -10,7 +10,7 @@ echo "Installing helm charts for ${APPNAME}-infra in namespace ${NAMESPACE}"
 export LB_IP=$(docker network inspect ${NETWORK} | jq -r ".[].Containers[] | select(.Name == \"k3d-${CLUSTERNAME}-serverlb\") | .IPv4Address | split(\"/\")[0]")
 export GATEWAY_IP=$(docker network inspect ${NETWORK} | jq -r ".[].IPAM.Config[0].Gateway")
 export BACKUPS_LB_IP=$(docker network inspect ${NETWORK} | jq -r ".[].Containers[] | select(.Name == \"k3d-${BACKUPS_CLUSTERNAME}-serverlb\") | .IPv4Address | split(\"/\")[0]")
-export MINIO_HOST=files.${LOCALHOST_NAME}
+export S3_HOST=files.${LOCALHOST_NAME}
 export BACKUPS_HOST=backups.${LOCALHOST_NAME}
 
 echo "Load balancer IP address detected: ${LB_IP}, backups LB IP: ${BACKUPS_LB_IP}"

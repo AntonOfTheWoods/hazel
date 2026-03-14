@@ -1,0 +1,28 @@
+# FIXME: this may or may not be needed!
+
+{{- if and .Values.hazel.traefik.enabled .Values.hazel.traefik.publicStoragePaths -}}
+{{- $host := .Values.hazel.lms.host }}
+{{- $s3host := .Values.hazel.s3.host | default "minio" }}
+{{- $s3port := .Values.hazel.s3.port | default 80 }}
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: public-storage-ingressroute
+  annotations:
+    {{- include "hazel.annotations" . | nindent 4 }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    {{- range .Values.hazel.traefik.publicStoragePaths }}
+    - match: Host(`{{ $host }}`) && PathPrefix(`{{ . }}`)
+      kind: Rule
+      services:
+        - name: {{ $s3host }}
+          port: {{ $s3port }}
+    {{- end }}
+
+  tls:
+    {{- include "hazel.ingressroute.tlsname" (dict "component" "something" "root" .) | nindent 4 }}
+
+{{- end -}}

@@ -1,4 +1,4 @@
-{{- if .Values.openedx.traefik.enabled -}}
+{{- if .Values.hazel.traefik.enabled -}}
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
@@ -22,7 +22,7 @@ metadata:
 spec:
   headers:
     accessControlAllowOriginList:
-{{- range .Values.openedx.cors.allowedOrigins }}
+{{- range .Values.hazel.cors.allowedOrigins }}
       - "{{ . }}"
 {{- end }}
     accessControlAllowCredentials: true
