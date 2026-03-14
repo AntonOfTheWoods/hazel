@@ -1,0 +1,22 @@
+{{- if and .Values.minio.enabled -}}
+{{- $namespace := .Release.Namespace -}}
+{{- $tenantName := .Values.minio.tenant.name -}}
+{{- $allBuckets := concat .Values.minio.extendedOperator.buckets (.Values.minio.extendedOperator.extraBuckets | default list) -}}
+{{- range $allBuckets -}}
+apiVersion: bfiola.dev/v1
+kind: MinioBucket
+metadata:
+  name: {{ .name }}
+spec:
+  name: {{ .name }}
+  deletionPolicy: {{ .deletionPolicy | default "IfEmpty" }}
+  tenantRef:
+    namespace: {{ $namespace }}
+    name: {{ $tenantName }}
+{{- if .versioning }}
+  versioning:
+    Status: Enabled
+{{- end }}
+---
+{{- end }}
+{{- end }}

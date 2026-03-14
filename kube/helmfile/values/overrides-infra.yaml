@@ -1,19 +1,19 @@
-db:
-  cluster:
-    extraRoles:
-      - name: notes
-        ensure: present
-        comment: "OpenedX notes Application User"
-        login: true
-        createdb: false
-        createrole: false
-        replication: false
-        bypassrls: false
-        passwordSecret:
-          name: notes-db-credentials
+# db:
+#   cluster:
+#     extraRoles:
+#       - name: notes
+#         ensure: present
+#         comment: "OpenedX notes Application User"
+#         login: true
+#         createdb: false
+#         createrole: false
+#         replication: false
+#         bypassrls: false
+#         passwordSecret:
+#           name: notes-db-credentials
 
-meilisearch:
-  fullnameOverride: meilisearch
+# meilisearch:
+#   fullnameOverride: meilisearch
 
 # Add the following to `overrides-infra-local.yaml` if you want to override the pool settings from the main infra file
 

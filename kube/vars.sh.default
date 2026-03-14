@@ -1,0 +1,28 @@
+#!/bin/bash
+
+export APPNAME=hazel
+export NAMESPACE=hazel
+export INGRESS_NAMESPACE=hazel  # not currently used, but may be useful in future for Gateway API
+export BACKUPS_NAMESPACE=backups
+
+export CONTAINER_REGISTRY_NAME=registry.hazel.localhost
+export CONTAINER_REGISTRY_PORT=5001
+
+export TLS_SECRET_NAME=${APPNAME}-${APPNAME}-cert
+export ENVIRONMENT=${ENVIRONMENT:-prod}
+
+export KUBECONFIG=~/.kube/config.k3d
+export CLUSTERNAME=hazel
+export BACKUPS_CLUSTERNAME=hazel-backups
+export MAIN_CONTEXT=k3d-${CLUSTERNAME}
+export BACKUPS_CONTEXT=k3d-${BACKUPS_CLUSTERNAME}
+export NETWORK=k3d-${CLUSTERNAME}
+
+export CONTAINER_USER_ID=1001
+export K3S_IMAGE_NAME=docker.io/rancher/k3s:v1.35.2-k3s1
+export GIT_VERSION=$(git describe --tags)
+export CONTAINER_REGISTRY=${CONTAINER_REGISTRY_NAME}:${CONTAINER_REGISTRY_PORT}
+
+export CHART_REPO=../charts/hazel
+
+export CONTAINER_REPO=${CONTAINER_REGISTRY}/${NAMESPACE}

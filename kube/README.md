@@ -1,0 +1,216 @@
+# hazel
+
+A Kubernetes `k3d` and `Helm` development environment and deployment tool for hazel.sh.
+
+> [!WARNING]
+> 2025-10-04
+
+## Founding concepts
+
+## Features
+
+### Dev features
+- hot reloading for all relevant projects
+- Automated TLS locally (and on the server)
+- Interaction with the sites using only port 443, whether pointing to a host-local, hot-reloaded dev version or not
+- and the Deploy features
+
+### Deploy features
+- Automated S3-compatible (point-in-time) db, (point-in-time) documentdb and storage backups included
+- Bootstrap/disaster recovery from S3-compatible storage
+
+## Dev/operator workstation prerequisites
+
+This setup has been tested on Ubuntu 24.04 and should work seamlessly on similar setups. It should also work well on recent (2025+) WSL2-Ubuntu 24.04 setups (with a couple of extra 1-2 minute setup steps). It probably works on recent MacOS, though hasn't been tested.
+
+First make sure you have `docker` properly installed:
+
+- `docker` - [Official instructions](https://docs.docker.com/engine/install/ubuntu/)
+
+Then, install `mise`:
+
+```bash
+curl https://mise.run | sh
+```
+
+Then install the rest:
+
+```bash
+mise use --global bun@latest k3d@latest kubectl@latest helm@latest helmfile@latest
+```
+
+A full local setup including all servers (DBs, Meilisearch, etc.) will require 2GB+ of RAM and a reasonably recent/powerful processor (laptop 2020+, desktop 2018+).
+
+You also _need_ ports `80` and `443` free and usable when running `hazel` and, if you want easy, direct access to the servers (dbs, redis, etc.) then ports 30432-30437 (these can also be changed within Kuberentes "nodeport range" but require modifying the scripts) should also be free.
+
+## Installation
+
+### Components
+
+While you can (obviously!) choose to use external services, the default install will install [Kubernetes Operators](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) for:
+
+- Garage (garage-operator)
+- Postgres (CNPG)
+- Redis (Opstree)
+
+And (normal) Helm-based installs for the following:
+
+- Cert-manager
+- Argo Workflows
+- Traefik
+- Coredns
+
+## Dev deployment
+
+> [!NOTE]
+> All commands after the clone should be executed from the directory that contains the `vars.sh.default` file (should be the same as this `README`)
+
+Init your workstation setup:
+
+```bash
+git clone git@github.com:HazelChat/hazel.git && cd kube
+# or https://github.com/HazelChat/hazel.git
+cp --update vars.sh.default vars.sh && touch kube/k3d-deploy/{overrides-local.yaml,overrides-infra-local.yaml} && mkdir -p ~/bin
+```
+
+These files are NOT managed by git and are included in the various scripts to store environment variables and values overrides for the two main helm charts.
+
+If your personalisation needs are more substantial, you could copy this repo's `ok3dx` (root level dir) and adapt outside of this repo. Don't hesitate to submit PRs if you think others might benefit from your changes!
+
+### Cluster init
+
+```bash
+bash kube/k3d-deploy/k3d-create-ok3dx-backups-cluster.sh && kube/k3d-deploy/k3d-create-ok3dx-cluster.sh && bash kube/k3d-deploy/openedx-create-secrets.sh
+```
+
+### Cluster operator and infra provisioning
+
+```bash
+bash kube/k3d-deploy/openedx-pre-install.sh && bash kube/k3d-deploy/kubectl-create-tls.sh
+```
+
+### Reinstall `openedx-infra`
+
+> [!NOTE]
+> The `openedx-pre-install.sh` script above installs the openedx-infra chart, so the following is only necessary if you want to redeploy just `openedx-infra` for some reason.
+
+```bash
+bash kube/k3d-deploy/openedx-infra-install.sh
+```
+
+### Install openedx
+
+```bash
+bash kube/k3d-deploy/openedx-install.sh
+```
+
+### Init openedx dbs/resources
+
+> [!NOTE]
+> The following can take 20+ minutes, but is only required once.
+
+```bash
+bash kube/k3d-deploy/openedx-init.sh
+```
+
+Show init progress - requires `argo`, see below:
+
+```bash
+source vars.sh && argo logs -f @latest
+```
+
+### Access the services
+
+When it has finished (see the argo logs above, or there are no longer init pods running), all non-init pods should be `Running` and init pods `Completed`.
+
+Create a superuser:
+
+```bash
+bash kube/k3d-deploy/openedx-create-user.sh USERNAME USER_EMAIL
+```
+
+You should now be able to access the sites on their normal dev-local URLs - https://local.openedx.io, https://studio.local.openedx.io, etc., and to log in with the (super)user you just created.
+
+
+### Launch realtime backups baselines
+
+> [!NOTE]
+> Requires the `cnpg` kubectl plugin, see below:
+
+```bash
+source vars.sh
+kubectl cnpg backup db-cluster --method plugin --plugin-name barman-cloud.cloudnative-pg.io
+kubectl cnpg backup documentdb-cluster --method plugin --plugin-name barman-cloud.cloudnative-pg.io
+```
+
+Alternatively, the default settings launch nighly backups - the next one will serve as the first baseline if you don't launch these now.
+
+## Dev development
+
+Unless you change the default settings, if you set `openedx.isDev: true`:
+
+
+```yaml
+# e.g, in overrides-local.yaml
+openedx:
+  isDev: true
+```
+
+Then the system has been set up to load project python files from `workspaces/apps/edx-platform`. If you want to work with a local copy then simply clone the [upstream repo](https://github.com/openedx/edx-platform) to the `apps` directory. The `apps` and `mnt` directories are .gitignored, so can be managed independently from there, and are mounted into the k3d "host" as follows.
+
+```bash
+# from `kube/k3d-deploy/k3d-create-cluster.sh`
+k3d cluster create ${APPNAME} --config ${SCRIPT_DIR}/k3d-config.yml \
+...
+  --volume ${SCRIPT_DIR}/volumes:/opt/${APPNAME}/volumes@all \
+  --volume ${SCRIPT_DIR}/../../workspaces:/workspaces@all \
+  --volume ${SCRIPT_DIR}/../../workspaces/apps/edx-platform:/openedx/edx-platform@all \
+  --volume ${SCRIPT_DIR}/../../workspaces/mnt:/mnt@all
+```
+
+The system was originally "inspired" by `tutor`, and `tutor` also has mounts going to a `/mnt` directory, so should be familiar to existing tutor users. The `workspaces/build` directory contains build helpers for building both `edx-platform` and `edx-notes-api` - the two main repos that needed modifying to support `postgres`. There are two build scripts to help build those. The former requires a local clone of the repo and the latter a remote git URL with a branch/tag/sha (ref). The init scripts in this repo mimick `tutor`'s init process, and if you are building locally (with `isDev: true`) then the same local install process gets run in this repo's `argo` workflow, (hopefully) resulting in near-identical results.
+
+If you have other special needs then you should probably just copy this repo's `ok3dx` directory somewhere and make changes as you see fit. It is all standard `k3d` and/or `helm` (with a couple of useful helper scripts) - nothing more, so Google, Stackoverflow, Reddit and your usual help haunts are your friends!
+
+## Staging/Prod deployment
+
+A key difference in philosophy with Tutor is that DevOps engineers should be in total control of their infrastructure. This project tries to make that not only possible but required... As such, there are no "prod-deploy" scripts. There are all the tools you'll need to build your own prod deploy scripts in about 10 minutes if you know what you are doing - basically if you have some experience with Helm and know what you are deploying into.
+
+If you are not comfortable with Helm (or at least want to be), you should probably stick with Tutor.
+
+> [!WARNING]
+> The default dev secrets (in `kube/k3d-deploy/secrets/ok3dx*`) *ARE NOT SUITABLE FOR PRODUCTION*. They are all basically some variant of "password". This is great for dev but not great for prod. The YAML secret files contain annotations which allow them to be reliably regenerated using basically identical code to Tutor via the python script `kube/k8s-deploy/regen-secrets.py`. Basically you just run that script (which needs either python's `pycryptodome` to be available to python, or linux's command line `openssl` to be available to the CL) with the `kube/k3d-deploy/secrets` directory as the first parameter and an output directory as the second and then you will have 3 directories you *CAN* `kubectl apply -f ...` to production, then properly manage with your secrets-management system.
+
+### Recommended extras
+
+#### argo cli
+
+```bash
+ARGO_OS="linux"
+ARGO_VERSION="v3.7.3"
+curl -sLO "https://github.com/argoproj/argo-workflows/releases/download/$ARGO_VERSION/argo-$ARGO_OS-amd64.gz"
+gunzip "argo-$ARGO_OS-amd64.gz"
+chmod +x "argo-$ARGO_OS-amd64"
+mv "./argo-$ARGO_OS-amd64" ~/bin/argo
+```
+
+#### kubectl cnpg plugin
+
+```bash
+CNPG_VERSION="1.27.1"
+wget https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v${CNPG_VERSION}/kubectl-cnpg_${CNPG_VERSION}_linux_x86_64.deb
+sudo apt install ./kubectl-cnpg_${CNPG_VERSION}_linux_x86_64.deb
+rm kubectl-cnpg_${CNPG_VERSION}_linux_x86_64.deb
+```
+
+# TODOs
+- integrate a proper secrets manager (SOPS?) for gitops
+- integrate CI/CD
+  - Argo?
+  - add a registry (harbor? zot? maybe move to full oci when ImageVolumes goes GA?)
+
+# Relationship to Edly Tutor
+
+The Open edX community has decided to focus on Tutor and in many key repos (such as `openedx/edx-platform`) is no longer maintaining documentation to ensure competent developers can use the code/projects independently, instead choosing to delegate that to Tutor Just Working. If it works as a whole, you don't need documentation for the individual bits, I guess is the rationale. As such, in 2025, there is no practical way to create a working Open edX platform in a tractable amount of time without reverse engineering how Tutor sets up and builds things, at least to a certain extent. So that was done. In the process a reasonable amount of code was copied, including the `indigo` theme and most of a `tutor`-produced local `build` directory. Some utility code was copied, particularly for generating passwords (see `ok3dx/kube/k8s-deploy/regen_secrets.py`).
+
+That said, Tutor does a lot of templating so plugins can inject code not only runtime config, but also build code/config fragments. That makes it very flexible and powerful. Also very complicated to reason about and ensure the stability and security of - unless maybe you have a technical PhD. At the very least it means you need to spend significant amounts of time and resources to become familiar with it, rather than a more widely used tool, like `helm`. While Tutor relies on a standard templating language and `kustomize` for deploying to Kubernetes, it is very much "black-box" in its approach. This project takes a different approach - use parameters and (environment) variables over templating, and additional building rather than trying to monolith it. Tutor has had many years to perfect its approach, so clearly has far more rounded edges and features. Stay tuned to this repo for more, and don't hesitate to submit PRs if you create some useful addtions!

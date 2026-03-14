@@ -1,0 +1,32 @@
+{{- if and .Values.minio.enabled .Values.minio.extendedOperator.user -}}
+---
+apiVersion: bfiola.dev/v1
+kind: MinioUser
+metadata:
+  name: {{ .Values.minio.extendedOperator.user.name }}
+spec:
+  # accessKey: {{ .Values.minio.extendedOperator.user.name }}
+  accessKeyRef:
+    name: {{ .Values.minio.extendedOperator.accessKey.secretName }}
+    key: {{ .Values.minio.extendedOperator.accessKey.secretKey }}
+  secretKeyRef:
+    name: {{ .Values.minio.extendedOperator.secretKey.secretName }}
+    key: {{ .Values.minio.extendedOperator.secretKey.secretKey }}
+  tenantRef:
+    namespace: {{ .Release.Namespace }}
+    name: {{ .Values.minio.tenant.name }}
+
+---
+apiVersion: bfiola.dev/v1
+kind: MinioPolicyBinding
+metadata:
+  name: {{ .Values.minio.extendedOperator.user.name }}-user-to-policy
+spec:
+  policy: {{ .Values.minio.extendedOperator.user.name }}-buckets-policy
+  tenantRef:
+    namespace: {{ .Release.Namespace }}
+    name: {{ .Values.minio.tenant.name }}
+  user:
+    builtin: {{ .Values.minio.extendedOperator.user.name }}
+
+{{- end -}}

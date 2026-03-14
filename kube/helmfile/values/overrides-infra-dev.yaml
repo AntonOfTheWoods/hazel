@@ -1,4 +1,4 @@
-openedx:
+hazel:
   isDev: true
 
 project:
@@ -6,47 +6,35 @@ project:
     enabled: true
     enableNodePorts: true
 
-minio:
-  tenant:
-    pools:
-      - servers: 1
-        name: pool-0
-        volumesPerServer: 1
-        size: 5Gi
-  ingress:
-    api:
-      enabled: true
-      ingressClassName: "traefik"
-      host: files.local.openedx.io
-      path: /
-      pathType: Prefix
-      annotations:
-        cert-manager.io/cluster-issuer: mkcert-issuer
-      tls:
-        - hosts:
-            - files.local.openedx.io
-          secretName: openedx-files-local-openedx-io-cert
-    console:
-      enabled: true
-      ingressClassName: "traefik"
-      host: minio-console.local.openedx.io
-      path: /
-      pathType: Prefix
-      annotations:
-        cert-manager.io/cluster-issuer: mkcert-issuer
-      tls:
-        - hosts:
-            - minio-console.local.openedx.io
-          secretName: openedx-minio-studio-local-openedx-io-cert
-
-meilisearch:
-  ingress:
-    enabled: true
-    host: meilisearch.local.openedx.io
-    className: traefik
-    annotations:
-      cert-manager.io/cluster-issuer: mkcert-issuer
-    tls:
-      - secretName: openedx-meilisearch-local-openedx-io-cert
-        hosts:
-          - meilisearch.local.openedx.io
+# minio:
+#   tenant:
+#     pools:
+#       - servers: 1
+#         name: pool-0
+#         volumesPerServer: 1
+#         size: 5Gi
+#   ingress:
+#     api:
+#       enabled: true
+#       ingressClassName: "traefik"
+#       host: files.local.openedx.io
+#       path: /
+#       pathType: Prefix
+#       annotations:
+#         cert-manager.io/cluster-issuer: mkcert-issuer
+#       tls:
+#         - hosts:
+#             - files.local.openedx.io
+#           secretName: openedx-files-local-openedx-io-cert
+#     console:
+#       enabled: true
+#       ingressClassName: "traefik"
+#       host: minio-console.local.openedx.io
+#       path: /
+#       pathType: Prefix
+#       annotations:
+#         cert-manager.io/cluster-issuer: mkcert-issuer
+#       tls:
+#         - hosts:
+#             - minio-console.local.openedx.io
+#           secretName: openedx-minio-studio-local-openedx-io-cert

@@ -24,8 +24,3 @@ additionalArguments:
   - "--serversTransport.forwardingTimeouts.dialTimeout=30s"
   - "--serversTransport.forwardingTimeouts.responseHeaderTimeout=300s"
   - "--serversTransport.forwardingTimeouts.idleConnTimeout=180s"
-  # this definitely works
-  # - "--entryPoints.web.transport.respondingTimeouts.readTimeout=300s"
-  # - "--entryPoints.web.transport.respondingTimeouts.writeTimeout=300s"
-  # - "--entryPoints.websecure.transport.respondingTimeouts.readTimeout=300s"
-  # - "--entryPoints.websecure.transport.respondingTimeouts.writeTimeout=300s"

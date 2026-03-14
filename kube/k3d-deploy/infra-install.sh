@@ -4,7 +4,7 @@ set -e
 
 echo '---'
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-source ${SCRIPT_DIR}/../../vars.sh
+source ${SCRIPT_DIR}/../vars.sh
 echo "Installing helm charts for ${APPNAME}-infra in namespace ${NAMESPACE}"
 
 export LB_IP=$(docker network inspect ${NETWORK} | jq -r ".[].Containers[] | select(.Name == \"k3d-${CLUSTERNAME}-serverlb\") | .IPv4Address | split(\"/\")[0]")

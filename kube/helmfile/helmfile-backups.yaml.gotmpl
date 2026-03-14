@@ -5,22 +5,18 @@ environments:
 ---
 
 templates:
-{{ readFile "./blocks/minio-tmpl.yaml" | indent 2 }}
+{{ readFile "blocks/garage-tmpl.yaml" | indent 2 }}
 
 releases:
-  - <<: *minio-operator
-  - <<: *minio-operator-ext-crds
-  - <<: *minio-operator-ext-operator
+  - <<: *garage
   - name: minio-backups
     namespace: backups
-    chart: ../../charts/transcrobes-backups
+    chart: ../../charts/hazel-backups
     version: 0.1.0
     wait: true
     waitForJobs: true
     needs:
-    - minio-operator/minio-operator
-    - minio-operator/minio-operator-ext-crds
-    - minio-operator/minio-operator-ext-operator
+    - garage/garage
     values:
     - ./values/overrides-backups-dev.yaml
     {{- if isFile "./values/overrides-backups-local.yaml" }}
@@ -29,14 +25,12 @@ releases:
 
 - name: minio-backups
   namespace: backups
-  chart: ../../../charts/openedx-backups
+  chart: ../../../charts/hazel-backups
   version: 0.1.0
   wait: true
   waitForJobs: true
   needs:
-  - minio-operator/minio-operator
-  - minio-operator/minio-operator-ext-crds
-  - minio-operator/minio-operator-ext-operator
+  - garage/garage
   values:
   {{ if (eq .Environment.Name "dev") }}
   - ./overrides-backups-dev.yaml
