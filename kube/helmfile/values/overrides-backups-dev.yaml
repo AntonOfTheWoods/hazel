@@ -1,0 +1,22 @@
+
+# minio:
+#   tenant:
+#     pools:
+#       - servers: 1
+#         name: pool-0
+#         volumesPerServer: 1
+#         size: 5Gi
+#
+#   ingress:
+#     api:
+#       enabled: true
+#       ingressClassName: "traefik"
+#       host: backups.localtest.me
+#       path: /
+#       pathType: Prefix
+#     console:
+#       enabled: true
+#       ingressClassName: "traefik"
+#       host: backups-console.localtest.me
+#       path: /
+#       pathType: Prefix

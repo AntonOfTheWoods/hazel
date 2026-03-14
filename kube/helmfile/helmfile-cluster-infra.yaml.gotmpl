@@ -1,0 +1,29 @@
+environments:
+  default:
+  dev:
+  production:
+---
+
+helmDefaults:
+  wait: true
+  waitForJobs: true
+
+templates:
+{{ readFile "blocks/argo-tmpl.yaml" | indent 2 }}
+{{ readFile "blocks/cert-manager-tmpl.yaml" | indent 2 }}
+{{ readFile "blocks/cnpg-tmpl.yaml" | indent 2 }}
+{{ readFile "blocks/traefik-tmpl.yaml" | indent 2 }}
+{{ readFile "blocks/garage-tmpl.yaml" | indent 2 }}
+
+releases:
+  - <<: *garage
+  - <<: *argo
+    values:
+      - "./values/argo-values.yaml"
+  - <<: *cert-manager
+  - <<: *trust-manager
+  - <<: *cnpg
+  - <<: *plugin-barman-cloud
+  - <<: *traefik
+    values:
+      - "./values/traefik-values.yaml"

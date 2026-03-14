@@ -1,0 +1,5 @@
+garage: &garage
+  name: garage
+  namespace: garage-operator-system
+  chart: oci://ghcr.io/rajsinghtech/charts/garage-operator
+  version: v0.1.4
