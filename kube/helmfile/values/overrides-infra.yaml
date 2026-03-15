@@ -3,7 +3,7 @@
 #     extraRoles:
 #       - name: notes
 #         ensure: present
-#         comment: "OpenedX notes Application User"
+#         comment: "hazel notes Application User"
 #         login: true
 #         createdb: false
 #         createrole: false

@@ -4,11 +4,11 @@ kind: Cluster
 metadata:
   name: {{ .Values.ferretdb.cluster.name | default "documentdb-cluster" }}
   annotations:
-    {{- include "openedxinfra.annotations" . | nindent 4 }}
+    {{- include "hazelinfra.annotations" . | nindent 4 }}
     # required for seamless bootstrap: https://github.com/cloudnative-pg/cloudnative-pg/issues/5778#issuecomment-2783417464
     cnpg.io/skipEmptyWalArchiveCheck: "enabled"
   labels:
-    {{- include "openedxinfra.componentLabels" (dict "component" "ferretdb" "root" .) | nindent 4 }}
+    {{- include "hazelinfra.componentLabels" (dict "component" "ferretdb" "root" .) | nindent 4 }}
 spec:
   instances: {{ .Values.ferretdb.cluster.instances | default 1 }}
   imageName: {{ .Values.ferretdb.cluster.image.repository | default "ghcr.io/ferretdb/postgres-documentdb" }}:{{ .Values.ferretdb.cluster.image.tag | default "17-0.106.0-ferretdb-2.5.0" }}

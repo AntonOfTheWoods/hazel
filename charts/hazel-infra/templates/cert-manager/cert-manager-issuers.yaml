@@ -1,6 +1,6 @@
-{{- if .Values.openedx.certManager.issuers }}
+{{- if .Values.hazel.certManager.issuers }}
 {{ $namespace := .Release.Namespace }}
-{{ range $issuer := .Values.openedx.certManager.issuers }}
+{{ range $issuer := .Values.hazel.certManager.issuers }}
 {{ if and $issuer.name $issuer.server $issuer.email $issuer.privateKeySecretRef }}
 ---
 apiVersion: cert-manager.io/v1

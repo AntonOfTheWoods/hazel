@@ -24,7 +24,7 @@ hazel:
     # if set and `isDev: true`, will mount a volume from this path (useful for local development)
     # WARNING: this path will be inside the k3d container if using k3d, not your host machine,
     # so if you want to use your host machine path, you need to mount it in k3d first at cluster creation time!
-    # This will be done automatically if using the ok3dx scripts
+    # This will be done automatically if using the kube scripts
     src: true
 
 

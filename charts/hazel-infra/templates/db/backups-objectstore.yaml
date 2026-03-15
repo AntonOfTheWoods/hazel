@@ -4,9 +4,9 @@ kind: ObjectStore
 metadata:
   name: {{ .Values.db.backups.barmanObjectName | default "s3-store-db" }}
   annotations:
-    {{- include "openedxinfra.annotations" . | nindent 4 }}
+    {{- include "hazelinfra.annotations" . | nindent 4 }}
   labels:
-    {{- include "openedxinfra.componentLabels" (dict "component" "db" "root" .) | nindent 4 }}
+    {{- include "hazelinfra.componentLabels" (dict "component" "db" "root" .) | nindent 4 }}
 
 spec:
   retentionPolicy: {{ .Values.db.backups.retention | default "7d" | quote }}

@@ -4,7 +4,7 @@ kind: ScheduledBackup
 metadata:
   name: {{ .Values.ferretdb.cluster.name | quote }}
   annotations:
-    {{- include "openedxinfra.annotations" . | nindent 4 }}
+    {{- include "hazelinfra.annotations" . | nindent 4 }}
 spec:
   schedule: {{ .Values.ferretdb.backups.schedule | quote }}
   backupOwnerReference: self

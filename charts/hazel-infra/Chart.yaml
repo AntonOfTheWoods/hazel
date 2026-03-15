@@ -1,20 +1,20 @@
 apiVersion: v2
-name: openedx-infra
+name: hazel-infra
 description: A Helm chart for Open edX platform infrastructure
 type: application
 version: 0.1.0
 appVersion: "v1"
 keywords:
-  - openedx
+  - hazel
   - k3d
   - kubernetes
   - helm
-home: https://github.com/AntonOfTheWoods/ohelmx
+home: https://github.com/HazelChat/hazel
 sources:
-  - https://github.com/AntonOfTheWoods/ohelmx
+  - https://github.com/HazelChat/hazel
 maintainers:
   - name: Anton MELSER
-    url: https://github.com/AntonOfTheWoods/ohelmx
+    url: https://github.com/AntonOfTheWoods
 
 dependencies:
   - name: tenant
@@ -22,11 +22,6 @@ dependencies:
     repository: "https://operator.min.io/"
     alias: minio
     condition: minio.enabled
-
-  - name: meilisearch
-    version: "0.17.x"
-    repository: "https://meilisearch.github.io/meilisearch-kubernetes/"
-    condition: meilisearch.enabled
 
   - name: redis
     version: "0.16.x"

@@ -1,68 +1,68 @@
-{{- if and .Values.openedx.enabled .Values.openedx.lmsWorker.enabled -}}
+{{- if and .Values.hazel.enabled .Values.hazel.lmsWorker.enabled -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: lms-worker
   annotations:
-    {{- include "openedx.annotations" . | nindent 4 }}
+    {{- include "hazel.annotations" . | nindent 4 }}
   labels:
-    {{- include "openedx.componentLabels" (dict "component" "lms-worker" "root" .) | nindent 4 }}
+    {{- include "hazel.componentLabels" (dict "component" "lms-worker" "root" .) | nindent 4 }}
 spec:
-  progressDeadlineSeconds: {{ .Values.openedx.lmsWorker.progressDeadlineSeconds | default 600 }}
-  replicas: {{ if hasKey .Values.openedx.lmsWorker "replicas" }}{{ .Values.openedx.lmsWorker.replicas }}{{ else }}1{{ end }}
-  revisionHistoryLimit: {{ .Values.openedx.lmsWorker.revisionHistoryLimit | default 10 }}
+  progressDeadlineSeconds: {{ .Values.hazel.lmsWorker.progressDeadlineSeconds | default 600 }}
+  replicas: {{ if hasKey .Values.hazel.lmsWorker "replicas" }}{{ .Values.hazel.lmsWorker.replicas }}{{ else }}1{{ end }}
+  revisionHistoryLimit: {{ .Values.hazel.lmsWorker.revisionHistoryLimit | default 10 }}
 
   selector:
     matchLabels:
-      {{- include "openedx.componentSelectorLabels" (dict "component" "lms-worker" "root" .) | nindent 6 }}
+      {{- include "hazel.componentSelectorLabels" (dict "component" "lms-worker" "root" .) | nindent 6 }}
 
-  {{- if .Values.openedx.lmsWorker.updateStrategy }}
-  strategy: {{- toYaml .Values.openedx.lmsWorker.updateStrategy | nindent 4 }}
+  {{- if .Values.hazel.lmsWorker.updateStrategy }}
+  strategy: {{- toYaml .Values.hazel.lmsWorker.updateStrategy | nindent 4 }}
   {{- end }}
 
   template:
     metadata:
       annotations:
-        {{- include "openedx.annotations" . | nindent 8 }}
+        {{- include "hazel.annotations" . | nindent 8 }}
       labels:
-        {{- include "openedx.componentLabels" (dict "component" "lms-worker" "root" .) | nindent 8 }}
+        {{- include "hazel.componentLabels" (dict "component" "lms-worker" "root" .) | nindent 8 }}
     spec:
-      dnsPolicy: {{ .Values.openedx.lmsWorker.dnsPolicy | default "ClusterFirst" }}
-      restartPolicy: {{ .Values.openedx.lmsWorker.restartPolicy | default "Always" }}
-      schedulerName: {{ .Values.openedx.lmsWorker.schedulerName | default "default-scheduler" }}
+      dnsPolicy: {{ .Values.hazel.lmsWorker.dnsPolicy | default "ClusterFirst" }}
+      restartPolicy: {{ .Values.hazel.lmsWorker.restartPolicy | default "Always" }}
+      schedulerName: {{ .Values.hazel.lmsWorker.schedulerName | default "default-scheduler" }}
 
       securityContext:
         runAsGroup: 1000
         runAsUser: 1000
 
-      terminationGracePeriodSeconds: {{ .Values.openedx.lmsWorker.terminationGracePeriodSeconds | default 30 }}
+      terminationGracePeriodSeconds: {{ .Values.hazel.lmsWorker.terminationGracePeriodSeconds | default 30 }}
 
-      {{- if .Values.openedx.isDev }}
+      {{- if .Values.hazel.isDev }}
       initContainers:
-      {{- include "openedx.dev.caInitContainerForComponent" (dict "component" "lms" "root" .) | nindent 6 }}
+      {{- include "hazel.dev.caInitContainerForComponent" (dict "component" "lms" "root" .) | nindent 6 }}
       {{- end }}
 
       containers:
-      - name: {{ .Values.openedx.lmsWorker.name | default "lms-worker" }}
-        image: {{ include "openedx.image" (dict "component" "lms" "root" .) }}
-        imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "lms" "root" .) }}
+      - name: {{ .Values.hazel.lmsWorker.name | default "lms-worker" }}
+        image: {{ include "hazel.image" (dict "component" "lms" "root" .) }}
+        imagePullPolicy: {{ include "hazel.imagePullPolicy" (dict "component" "lms" "root" .) }}
 
-        {{- if dig "diagnosticMode" "enabled" false .Values.openedx.lmsWorker }}
-        command: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.lmsWorker.diagnosticMode.command "context" $) | nindent 10 }}
-        {{- else if .Values.openedx.lmsWorker.command }}
-        command: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.lmsWorker.command "context" $) | nindent 10 }}
-        {{- else if .Values.openedx.isDev }}
+        {{- if dig "diagnosticMode" "enabled" false .Values.hazel.lmsWorker }}
+        command: {{- include "common.tplvalues.render" (dict "value" .Values.hazel.lmsWorker.diagnosticMode.command "context" $) | nindent 10 }}
+        {{- else if .Values.hazel.lmsWorker.command }}
+        command: {{- include "common.tplvalues.render" (dict "value" .Values.hazel.lmsWorker.command "context" $) | nindent 10 }}
+        {{- else if .Values.hazel.isDev }}
         command:
         - /bin/sh
         - -c
         args:
         - |
-          {{- include "openedx.dev.startupScript" . | nindent 10 }}
+          {{- include "hazel.dev.startupScript" . | nindent 10 }}
           exec celery \
             --app=lms.celery \
             worker \
-            --loglevel={{ .Values.openedx.lmsWorker.loglevel | default "info" }} \
-            --concurrency={{ .Values.openedx.lmsWorker.concurrency | default 2 }} \
+            --loglevel={{ .Values.hazel.lmsWorker.loglevel | default "info" }} \
+            --concurrency={{ .Values.hazel.lmsWorker.concurrency | default 2 }} \
             --max-tasks-per-child=100 \
             --prefetch-multiplier=1 \
             --without-gossip \
@@ -71,17 +71,17 @@ spec:
             --queues=edx.lms.core.default,edx.lms.core.high,edx.lms.core.high_mem
         {{- end }}
 
-        {{- if dig "diagnosticMode" "enabled" false .Values.openedx.lmsWorker }}
-        args: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.lmsWorker.diagnosticMode.args "context" $) | nindent 10 }}
-        {{- else if and .Values.openedx.lmsWorker.args (not .Values.openedx.isDev) }}
-        args: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.lmsWorker.args "context" $) | nindent 11 }}
-        {{- else if not .Values.openedx.isDev }}
+        {{- if dig "diagnosticMode" "enabled" false .Values.hazel.lmsWorker }}
+        args: {{- include "common.tplvalues.render" (dict "value" .Values.hazel.lmsWorker.diagnosticMode.args "context" $) | nindent 10 }}
+        {{- else if and .Values.hazel.lmsWorker.args (not .Values.hazel.isDev) }}
+        args: {{- include "common.tplvalues.render" (dict "value" .Values.hazel.lmsWorker.args "context" $) | nindent 11 }}
+        {{- else if not .Values.hazel.isDev }}
         args:
         - celery
         - --app=lms.celery
         - worker
-        - --loglevel={{ .Values.openedx.lmsWorker.loglevel | default "info" }}
-        - --concurrency={{ .Values.openedx.lmsWorker.concurrency | default 2 }}
+        - --loglevel={{ .Values.hazel.lmsWorker.loglevel | default "info" }}
+        - --concurrency={{ .Values.hazel.lmsWorker.concurrency | default 2 }}
         - --max-tasks-per-child=100
         - --prefetch-multiplier=1
         - --without-gossip
@@ -90,12 +90,12 @@ spec:
         - --queues=edx.lms.core.default,edx.lms.core.high,edx.lms.core.high_mem
         {{- end }}
 
-        {{- if .Values.openedx.lmsWorker.resources }}
-        resources: {{- toYaml .Values.openedx.lmsWorker.resources | nindent 12 }}
+        {{- if .Values.hazel.lmsWorker.resources }}
+        resources: {{- toYaml .Values.hazel.lmsWorker.resources | nindent 12 }}
         {{- end }}
 
-        terminationMessagePath: {{ .Values.openedx.lmsWorker.terminationMessagePath | default "/dev/termination-log" }}
-        terminationMessagePolicy: {{ .Values.openedx.lmsWorker.terminationMessagePolicy | default "File" }}
+        terminationMessagePath: {{ .Values.hazel.lmsWorker.terminationMessagePath | default "/dev/termination-log" }}
+        terminationMessagePolicy: {{ .Values.hazel.lmsWorker.terminationMessagePolicy | default "File" }}
 
         securityContext:
           allowPrivilegeEscalation: false
@@ -106,34 +106,34 @@ spec:
         - name: DJANGO_SETTINGS_MODULE
           value: lms.envs.tutor.production
         - name: SITE_ID
-          value: {{ .Values.openedx.lms.siteId | quote }}
+          value: {{ .Values.hazel.lms.siteId | quote }}
 
-        {{- include "openedx.common.env" . | nindent 8 }}
-        {{- include "openedx.cms.env" . | nindent 8 }}
+        {{- include "hazel.common.env" . | nindent 8 }}
+        {{- include "hazel.cms.env" . | nindent 8 }}
 
-        {{- if .Values.openedx.lmsWorker.extraEnvVars }}
-        {{- include "common.tplvalues.render" (dict "value" .Values.openedx.lmsWorker.extraEnvVars "context" $) | nindent 8 }}
+        {{- if .Values.hazel.lmsWorker.extraEnvVars }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.hazel.lmsWorker.extraEnvVars "context" $) | nindent 8 }}
         {{- end }}
 
         volumeMounts:
-        {{- include "openedx.common.volumeMounts" . | nindent 8 }}
-        {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
-        {{- include "openedx.dev.caVolumeMounts" . | nindent 8 }}
+        {{- include "hazel.common.volumeMounts" . | nindent 8 }}
+        {{- include "hazel.dev.volumeMounts" . | nindent 8 }}
+        {{- include "hazel.dev.caVolumeMounts" . | nindent 8 }}
 
-        {{- if .Values.openedx.lmsWorker.extraVolumeMounts }}
-        {{- include "common.tplvalues.render" (dict "value" .Values.openedx.lmsWorker.extraVolumeMounts "context" $) | nindent 8 }}
+        {{- if .Values.hazel.lmsWorker.extraVolumeMounts }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.hazel.lmsWorker.extraVolumeMounts "context" $) | nindent 8 }}
         {{- end }}
 
-        {{- if .Values.openedx.lmsWorker.sidecars }}
-        {{- include "common.tplvalues.render" ( dict "value" .Values.openedx.lmsWorker.sidecars "context" $) | nindent 8 }}
+        {{- if .Values.hazel.lmsWorker.sidecars }}
+        {{- include "common.tplvalues.render" ( dict "value" .Values.hazel.lmsWorker.sidecars "context" $) | nindent 8 }}
         {{- end }}
 
       volumes:
-      {{- include "openedx.common.volumes" . | nindent 6 }}
-      {{- include "openedx.dev.volumes" . | nindent 6 }}
-      {{- include "openedx.dev.caVolumes" . | nindent 6 }}
-      {{- if .Values.openedx.lmsWorker.extraVolumes }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.openedx.lmsWorker.extraVolumes "context" $) | nindent 6 }}
+      {{- include "hazel.common.volumes" . | nindent 6 }}
+      {{- include "hazel.dev.volumes" . | nindent 6 }}
+      {{- include "hazel.dev.caVolumes" . | nindent 6 }}
+      {{- if .Values.hazel.lmsWorker.extraVolumes }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.hazel.lmsWorker.extraVolumes "context" $) | nindent 6 }}
       {{- end }}
 
 {{- end -}}

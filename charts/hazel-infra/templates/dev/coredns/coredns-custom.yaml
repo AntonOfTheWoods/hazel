@@ -1,4 +1,4 @@
-{{- if and .Values.openedx.isDev .Values.openedx.dev.files.lbIP .Values.openedx.dev.backups.lbIP -}}
+{{- if and .Values.hazel.isDev .Values.hazel.dev.files.lbIP .Values.hazel.dev.backups.lbIP -}}
 {{- $domains := (list .Values.minio.ingress.api.host ) | uniq -}}
 {{- $backupsDomains := (list .Values.db.backups.host .Values.ferretdb.backups.host) | uniq -}}
 {{- $allDomains := (concat $domains $backupsDomains) | uniq -}}
@@ -11,8 +11,8 @@ data:
     files.server: |
           {{ join " " $allDomains }} {
               hosts {
-                  {{ .Values.openedx.dev.files.lbIP }} {{ join " " $domains }}
-                  {{ .Values.openedx.dev.backups.lbIP }} {{ join " " $backupsDomains }}
+                  {{ .Values.hazel.dev.files.lbIP }} {{ join " " $domains }}
+                  {{ .Values.hazel.dev.backups.lbIP }} {{ join " " $backupsDomains }}
                   fallthrough
               }
           }

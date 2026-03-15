@@ -1,7 +1,7 @@
-# `openedx-infra` - OpenEdX Pre-requisites Helm Chart
+# `hazel-infra` - hazel Pre-requisites Helm Chart
 
-This Helm chart deploys system pre-requisites for the Open edX learning management system to Kubernetes. The actual LMS is installed with the sister chart `openedx`.
+This Helm chart deploys system pre-requisites for the Open edX learning management system to Kubernetes. The actual LMS is installed with the sister chart `hazel`.
 
 ## Overview
 
-Please look at `ok3dx` for the meanwhile.
+Please look at `kube` for the meanwhile.

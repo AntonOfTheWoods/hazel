@@ -1,15 +1,15 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "openedxinfra.name" -}}
+{{- define "hazelinfra.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common annotations that match Kustomize commonAnnotations
 */}}
-{{- define "openedxinfra.annotations" -}}
-app.kubernetes.io/version: {{ .Values.global.openedxVersion | quote }}
+{{- define "hazelinfra.annotations" -}}
+app.kubernetes.io/version: {{ .Values.global.hazelVersion | quote }}
 {{- with .Values.commonAnnotations }}
 {{- toYaml . | nindent 0 }}
 {{- end }}
@@ -18,20 +18,20 @@ app.kubernetes.io/version: {{ .Values.global.openedxVersion | quote }}
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "openedxinfra.chart" -}}
+{{- define "hazelinfra.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "openedxinfra.labels" -}}
-helm.sh/chart: {{ include "openedxinfra.chart" . }}
-app.kubernetes.io/name: {{ include "openedxinfra.name" . }}
-app.kubernetes.io/instance: openedxinfra-{{ .Values.global.instanceId }}
-app.kubernetes.io/version: {{ .Values.global.openedxVersion | quote }}
+{{- define "hazelinfra.labels" -}}
+helm.sh/chart: {{ include "hazelinfra.chart" . }}
+app.kubernetes.io/name: {{ include "hazelinfra.name" . }}
+app.kubernetes.io/instance: hazelinfra-{{ .Values.global.instanceId }}
+app.kubernetes.io/version: {{ .Values.global.hazelVersion | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/part-of: openedxinfra
+app.kubernetes.io/part-of: hazelinfra
 {{- with .Values.commonLabels }}
 {{- toYaml . | nindent 0 }}
 {{- end }}
@@ -40,26 +40,26 @@ app.kubernetes.io/part-of: openedxinfra
 {{/*
 Selector labels
 */}}
-{{- define "openedxinfra.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "openedxinfra.name" . }}
+{{- define "hazelinfra.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "hazelinfra.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Component-specific labels
 */}}
-{{- define "openedxinfra.componentLabels" -}}
+{{- define "hazelinfra.componentLabels" -}}
 {{- $component := .component }}
-{{- include "openedxinfra.labels" .root | nindent 0 }}
+{{- include "hazelinfra.labels" .root | nindent 0 }}
 app.kubernetes.io/component: {{ $component }}
 {{- end }}
 
 {{/*
 Component-specific selector labels
 */}}
-{{- define "openedxinfra.componentSelectorLabels" -}}
+{{- define "hazelinfra.componentSelectorLabels" -}}
 {{- $component := .component }}
-app.kubernetes.io/name: {{ include "openedxinfra.name" .root }}
-app.kubernetes.io/instance: openedxinfra-{{ .root.Values.global.instanceId }}
+app.kubernetes.io/name: {{ include "hazelinfra.name" .root }}
+app.kubernetes.io/instance: hazelinfra-{{ .root.Values.global.instanceId }}
 app.kubernetes.io/component: {{ $component }}
 {{- end }}

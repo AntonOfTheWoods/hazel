@@ -1,15 +1,15 @@
 global:
-  namespace: openedx
-  openedxVersion: "20.0.1-main"
-  instanceId: "openedx-instance"
+  namespace: hazel
+  hazelVersion: "20.0.1-main"
+  instanceId: "hazel-instance"
   redirectHttp: true
 
 project:
   local:
     enabled: false
     enableNodePorts: false
-# .Values.openedx.certManager.issuers
-openedx:
+# .Values.hazel.certManager.issuers
+hazel:
   isDev: false
   dev:
     files:
@@ -22,17 +22,17 @@ openedx:
       # - server: https://acme-staging-v02.api.letsencrypt.org/directory
       #   name: "letsencrypt-staging"
       #   kind: "Issuer"
-      #   email: "certs@local.openedx.io"
+      #   email: "certs@local.hazel.io"
       #   privateKeySecretRef: "le-key-staging"
       # - server: https://acme-v02.api.letsencrypt.org/directory
       #   name: "letsencrypt-prod"
       #   kind: "Issuer"
-      #   email: "certs@local.openedx.io"
+      #   email: "certs@local.hazel.io"
       #   privateKeySecretRef: "le-key-prod"
 
 # Common labels and annotations
 commonLabels:
-  app.kubernetes.io/part-of: openedx
+  app.kubernetes.io/part-of: hazel
   # app.kubernetes.io/managed-by: Helm
   # Additional common labels can be added here
 
@@ -47,8 +47,8 @@ db:
     schedule: "0 30 2 * * *"  # At 02:30:00 (UTC) every day
     retention: 7d          # keep 7 backups
     barmanObjectName: s3-store-db
-    destinationPath: "openedx-db-backups"
-    host: backups.local.openedx.io
+    destinationPath: "hazel-db-backups"
+    host: backups.local.hazel.io
     port: 80
     useSSL: false
     walCompression: bzip2  # bzip2;gzip;lz4;snappy;xz;zstd
@@ -72,7 +72,7 @@ db:
     superuser:
       credentials: db-super-credentials
     user:
-      credentials: openedx-db-credentials
+      credentials: hazel-db-credentials
     storage:
       size: 5Gi
 
@@ -83,8 +83,8 @@ db:
     # To bootstrap a new database (needs db-migratejob.yaml afterwards)
     bootstrap:
       enabled: true
-      dbName: openedx
-      dbOwner: openedx
+      dbName: hazel
+      dbOwner: hazel
       recovery:
         # To restore from a backup
         # backupSource: true
@@ -98,7 +98,7 @@ db:
       # example:
       # - name: notes
       #   ensure: present
-      #   comment: "OpenedX Application User"
+      #   comment: "hazel Application User"
       #   login: true
       #   createdb: true
       #   createrole: false
@@ -125,8 +125,8 @@ ferretdb:
     schedule: "0 0 2 * * *"  # At 02:00:00 (UTC) every day
     retention: "7d"           # keep 7 backups
     barmanObjectName: s3-store-documentdb
-    destinationPath: "openedx-documentdb-backups"
-    host: backups.local.openedx.io
+    destinationPath: "hazel-documentdb-backups"
+    host: backups.local.hazel.io
     port: 80
     useSSL: false
     walCompression: bzip2  # bzip2;gzip;lz4;snappy;xz;zstd
@@ -177,7 +177,7 @@ ferretdb:
       # example:
       # - name: notes
       #   ensure: present
-      #   comment: "OpenedX Application User"
+      #   comment: "hazel Application User"
       #   login: true
       #   createdb: true
       #   createrole: false
@@ -206,7 +206,7 @@ meilisearch:
     annotations: {}
     path: /
     hosts:
-      - meilisearch.local.openedx.io
+      - meilisearch.local.hazel.io
     tls: []
     #  - secretName: chart-example-tls
     #    hosts:
@@ -222,22 +222,22 @@ meilisearch:
 minio:
   enabled: true
   extendedOperator:
-    # Set this to create a user for OpenedX to use for storage
+    # Set this to create a user for hazel to use for storage
     # The secret with this name must exist and contain keys `secretKey`
-    # You can use the provided `ok3dx/kube/k3d-deploy/secrets/openedx-infra/s3-storage.json` to create such a secret
+    # You can use the provided `kube/kube/k3d-deploy/secrets/hazel-infra/s3-storage.json` to create such a secret
     user:
       name: s3-storage
       secretName: s3-storage
       secretKeyName: password
 
     buckets:
-      - name: openedx
+      - name: hazel
         versioning: true
-      - name: openedxuploads
+      - name: hazeluploads
         versioning: true
-      - name: openedxgrades
+      - name: hazelgrades
         versioning: true
-      - name: openedxprofiles
+      - name: hazelprofiles
         versioning: true
       - name: public
         versioning: true
@@ -277,7 +277,7 @@ minio:
       labels: { }
       annotations: { }
       tls: [ ]
-      host: files.local.openedx.io
+      host: files.local.hazel.io
       path: /
       pathType: Prefix
     console:
@@ -286,7 +286,7 @@ minio:
       labels: { }
       annotations: { }
       tls: [ ]
-      host: minio-console.local.openedx.io
+      host: minio-console.local.hazel.io
       path: /
       pathType: Prefix
 

@@ -4,21 +4,21 @@ kind: Deployment
 metadata:
   name: ferretdb
   annotations:
-    {{- include "openedxinfra.annotations" . | nindent 4 }}
+    {{- include "hazelinfra.annotations" . | nindent 4 }}
   labels:
-    {{- include "openedxinfra.componentLabels" (dict "component" "ferretdb" "root" .) | nindent 4 }}
+    {{- include "hazelinfra.componentLabels" (dict "component" "ferretdb" "root" .) | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      {{- include "openedxinfra.componentSelectorLabels" (dict "component" "ferretdb" "root" .) | nindent 6 }}
+      {{- include "hazelinfra.componentSelectorLabels" (dict "component" "ferretdb" "root" .) | nindent 6 }}
 
   template:
     metadata:
       annotations:
-        {{- include "openedxinfra.annotations" . | nindent 8 }}
+        {{- include "hazelinfra.annotations" . | nindent 8 }}
       labels:
-        {{- include "openedxinfra.componentLabels" (dict "component" "ferretdb" "root" .) | nindent 8 }}
+        {{- include "hazelinfra.componentLabels" (dict "component" "ferretdb" "root" .) | nindent 8 }}
 
     spec:
       containers:

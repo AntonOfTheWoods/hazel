@@ -5,7 +5,7 @@ metadata:
   name: documentdb-nodeport
   labels:
     app.kubernetes.io/component: database
-    app.kubernetes.io/instance: openedx
+    app.kubernetes.io/instance: hazel
     app.kubernetes.io/name: documentdb
 
 spec:

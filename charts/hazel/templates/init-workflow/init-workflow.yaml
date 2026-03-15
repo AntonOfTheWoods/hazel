@@ -1,29 +1,29 @@
-{{- if .Values.openedx.init.enabled }}
+{{- if .Values.hazel.init.enabled }}
 apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
-  name: openedx-init-workflow-template
+  name: hazel-init-workflow-template
   annotations:
-    {{- include "openedx.annotations" . | nindent 4 }}
+    {{- include "hazel.annotations" . | nindent 4 }}
   labels:
-    {{- include "openedx.componentLabels" (dict "component" "openedx" "root" .) | nindent 4 }}
+    {{- include "hazel.componentLabels" (dict "component" "hazel" "root" .) | nindent 4 }}
 
 spec:
   entrypoint: main
 
-  {{- include "openedx.imagePullSecrets" . | nindent 2 }}
+  {{- include "hazel.imagePullSecrets" . | nindent 2 }}
 
-  activeDeadlineSeconds: {{ .Values.openedx.init.workflow.timeout | default 3600 }}
+  activeDeadlineSeconds: {{ .Values.hazel.init.workflow.timeout | default 3600 }}
   serviceAccountName: argo-workflow
   templates:
   - name: main
     dag:
       tasks:
-      - name: openedx-init
-        template: openedx-init
+      - name: hazel-init
+        template: hazel-init
       - name: meilisearch-init
         template: meilisearch-init
-        dependencies: [openedx-init]
+        dependencies: [hazel-init]
       - name: lms-migrate
         template: lms-migrate
         dependencies: [meilisearch-init]
@@ -46,10 +46,10 @@ spec:
         template: notes-index-init
         dependencies: [notes-user-init]
 
-  - name: openedx-init
+  - name: hazel-init
     container:
-      image: {{ include "openedx.image" (dict "component" "lms" "root" .) }}
-      imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "lms" "root" .) }}
+      image: {{ include "hazel.image" (dict "component" "lms" "root" .) }}
+      imagePullPolicy: {{ include "hazel.imagePullPolicy" (dict "component" "lms" "root" .) }}
 
       command: ["/bin/bash", "-c"]
       args:
@@ -65,7 +65,7 @@ spec:
           done
 
           # 2. edx-platform
-          if [ -f /openedx/edx-platform/bindmount-canary ] ; then
+          if [ -f /hazel/edx-platform/bindmount-canary ] ; then
             echo "Using edx-platform from image (not bind-mount)."
             echo "No extra setup is required."
             exit
@@ -82,25 +82,25 @@ spec:
           value: lms
         - name: DJANGO_SETTINGS_MODULE
           value: lms.envs.tutor.production
-        {{- include "openedx.common.env" . | nindent 8 }}
+        {{- include "hazel.common.env" . | nindent 8 }}
 
       volumeMounts:
-        {{- include "openedx.common.volumeMounts" . | nindent 8 }}
-        {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
+        {{- include "hazel.common.volumeMounts" . | nindent 8 }}
+        {{- include "hazel.dev.volumeMounts" . | nindent 8 }}
     volumes:
-      {{- include "openedx.common.volumes" . | nindent 6 }}
-      {{- include "openedx.dev.volumes" . | nindent 6 }}
+      {{- include "hazel.common.volumes" . | nindent 6 }}
+      {{- include "hazel.dev.volumes" . | nindent 6 }}
 
   - name: forum-init
     container:
-      image: {{ include "openedx.image" (dict "component" "lms" "root" .) }}
-      imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "lms" "root" .) }}
+      image: {{ include "hazel.image" (dict "component" "lms" "root" .) }}
+      imagePullPolicy: {{ include "hazel.imagePullPolicy" (dict "component" "lms" "root" .) }}
 
       command: ["/bin/bash", "-c"]
       args:
         - |
           set -e
-          cd /openedx/edx-platform
+          cd /hazel/edx-platform
 
           (./manage.py lms waffle_flag --list | grep discussions.enable_forum_v2) || ./manage.py lms waffle_flag --create --everyone discussions.enable_forum_v2
 
@@ -132,32 +132,32 @@ spec:
           value: lms
         - name: DJANGO_SETTINGS_MODULE
           value: lms.envs.tutor.production
-        {{- include "openedx.common.env" . | nindent 8 }}
+        {{- include "hazel.common.env" . | nindent 8 }}
 
       volumeMounts:
-        {{- include "openedx.common.volumeMounts" . | nindent 8 }}
-        {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
+        {{- include "hazel.common.volumeMounts" . | nindent 8 }}
+        {{- include "hazel.dev.volumeMounts" . | nindent 8 }}
 
         # FIXME: is this right for kubernetes???
-        - mountPath: /openedx/media
+        - mountPath: /hazel/media
           name: media-storage
 
     volumes:
-      {{- include "openedx.common.volumes" . | nindent 6 }}
-      {{- include "openedx.dev.volumes" . | nindent 6 }}
+      {{- include "hazel.common.volumes" . | nindent 6 }}
+      {{- include "hazel.dev.volumes" . | nindent 6 }}
       - name: media-storage
         emptyDir: {}
 
   - name: meilisearch-init
     container:
-      image: {{ include "openedx.image" (dict "component" "lms" "root" .) }}
-      imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "lms" "root" .) }}
+      image: {{ include "hazel.image" (dict "component" "lms" "root" .) }}
+      imagePullPolicy: {{ include "hazel.imagePullPolicy" (dict "component" "lms" "root" .) }}
 
       command: ["/bin/bash", "-c"]
       args:
         - |
           set -e
-          cd /openedx/edx-platform
+          cd /hazel/edx-platform
           echo "Creating Meilisearch api key..."
           ./manage.py lms shell -c "
           import os
@@ -179,59 +179,59 @@ spec:
                   'actions': ['*'],
                   'indexes': [MEILISEARCH_INDEX_PREFIX + '*'],
                   'expiresAt': None,
-                  'description': 'Use it for backend API calls -- Created by ok3dx',
+                  'description': 'Use it for backend API calls -- Created by kube',
               })
               print('Key created successfully')
           "
 
       env:
-        {{- include "openedx.common.env" . | nindent 8 }}
+        {{- include "hazel.common.env" . | nindent 8 }}
 
         - name: MEILISEARCH_URL
-          value: "{{ .Values.openedx.meilisearch.service.scheme }}://{{ .Values.openedx.meilisearch.service.host }}:{{ .Values.openedx.meilisearch.service.port }}"
+          value: "{{ .Values.hazel.meilisearch.service.scheme }}://{{ .Values.hazel.meilisearch.service.host }}:{{ .Values.hazel.meilisearch.service.port }}"
 
         - name: MEILISEARCH_MASTER_KEY  # name of env var
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.openedx.meilisearch.auth.existingMasterKeySecret }}
+              name: {{ .Values.hazel.meilisearch.auth.existingMasterKeySecret }}
               key: MEILI_MASTER_KEY
 
         - name: MEILISEARCH_API_KEY_UID
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.openedx.meilisearch.auth.apiKeyUid.secretName }}
-              key: {{ .Values.openedx.meilisearch.auth.apiKeyUid.secretKey }}
+              name: {{ .Values.hazel.meilisearch.auth.apiKeyUid.secretName }}
+              key: {{ .Values.hazel.meilisearch.auth.apiKeyUid.secretKey }}
 
         - name: MEILISEARCH_INDEX_PREFIX
-          value: "{{ .Values.openedx.meilisearch.indexPrefix | default "tutor_" }}"
+          value: "{{ .Values.hazel.meilisearch.indexPrefix | default "tutor_" }}"
 
       volumeMounts:
-        {{- include "openedx.common.volumeMounts" . | nindent 8 }}
-        {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
-        - mountPath: /openedx/media
+        {{- include "hazel.common.volumeMounts" . | nindent 8 }}
+        {{- include "hazel.dev.volumeMounts" . | nindent 8 }}
+        - mountPath: /hazel/media
           name: media-storage
     volumes:
-      {{- include "openedx.common.volumes" . | nindent 6 }}
-      {{- include "openedx.dev.volumes" . | nindent 6 }}
+      {{- include "hazel.common.volumes" . | nindent 6 }}
+      {{- include "hazel.dev.volumes" . | nindent 6 }}
       - name: media-storage
         emptyDir: {}
 
   - name: lms-migrate
-    {{- if .Values.openedx.isDev }}
+    {{- if .Values.hazel.isDev }}
     initContainers:
-    {{- include "openedx.dev.caInitContainerForComponent" (dict "component" "lms" "root" .) | nindent 4 }}
+    {{- include "hazel.dev.caInitContainerForComponent" (dict "component" "lms" "root" .) | nindent 4 }}
     {{- end }}
     container:
-      image: {{ include "openedx.image" (dict "component" "lms" "root" .) }}
-      imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "lms" "root" .) }}
+      image: {{ include "hazel.image" (dict "component" "lms" "root" .) }}
+      imagePullPolicy: {{ include "hazel.imagePullPolicy" (dict "component" "lms" "root" .) }}
 
       command: ["/bin/bash", "-c"]
       args:
         - |
           set -e
-          cd /openedx/edx-platform
+          cd /hazel/edx-platform
 
-          {{ include "openedx.dev.startupScript" . | nindent 10 }}
+          {{ include "hazel.dev.startupScript" . | nindent 10 }}
 
           echo "Loading settings $DJANGO_SETTINGS_MODULE"
 
@@ -241,8 +241,8 @@ spec:
           ./manage.py lms shell -c "import search.meilisearch; search.meilisearch.create_indexes()"
 
           # Create oauth2 apps for CMS SSO
-          # https://github.com/openedx/edx-platform/blob/master/docs/guides/studio_oauth.rst
-          ./manage.py lms manage_user cms cms@openedx --unusable-password
+          # https://github.com/hazel/edx-platform/blob/master/docs/guides/studio_oauth.rst
+          ./manage.py lms manage_user cms cms@hazel --unusable-password
           ./manage.py lms create_dot_application \
             --grant-type authorization-code \
             --redirect-uris "https://${CMS_HOST}/complete/edx-oauth2/" \
@@ -253,11 +253,11 @@ spec:
             --update cms-sso cms
 
           # Fix incorrect uploaded file path
-          if [ -d /openedx/data/uploads/ ]; then
-            if [ -n "$(ls -A /openedx/data/uploads/)" ]; then
+          if [ -d /hazel/data/uploads/ ]; then
+            if [ -n "$(ls -A /hazel/data/uploads/)" ]; then
               echo "Migrating LMS uploaded files to shared directory"
-              mv /openedx/data/uploads/* /openedx/media/
-              rm -rf /openedx/data/uploads/
+              mv /hazel/data/uploads/* /hazel/media/
+              rm -rf /hazel/data/uploads/
             fi
           fi
 
@@ -271,49 +271,49 @@ spec:
           value: lms
         - name: DJANGO_SETTINGS_MODULE
           value: lms.envs.tutor.production
-        {{- include "openedx.common.env" . | nindent 8 }}
-        {{- include "openedx.cms.env" . | nindent 8 }}
+        {{- include "hazel.common.env" . | nindent 8 }}
+        {{- include "hazel.cms.env" . | nindent 8 }}
 
       volumeMounts:
-        {{- include "openedx.common.volumeMounts" . | nindent 8 }}
-        {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
-        {{- include "openedx.dev.caVolumeMounts" . | nindent 8 }}
-        - mountPath: /openedx/media
+        {{- include "hazel.common.volumeMounts" . | nindent 8 }}
+        {{- include "hazel.dev.volumeMounts" . | nindent 8 }}
+        {{- include "hazel.dev.caVolumeMounts" . | nindent 8 }}
+        - mountPath: /hazel/media
           name: media-storage
     volumes:
-      {{- include "openedx.common.volumes" . | nindent 6 }}
-      {{- include "openedx.dev.volumes" . | nindent 6 }}
-      {{- include "openedx.dev.caVolumes" . | nindent 6 }}
+      {{- include "hazel.common.volumes" . | nindent 6 }}
+      {{- include "hazel.dev.volumes" . | nindent 6 }}
+      {{- include "hazel.dev.caVolumes" . | nindent 6 }}
       - name: media-storage
         emptyDir: {}
 
   - name: cms-migrate
-    {{- if .Values.openedx.isDev }}
+    {{- if .Values.hazel.isDev }}
     initContainers:
-    {{- include "openedx.dev.caInitContainerForComponent" (dict "component" "cms" "root" .) | nindent 4 }}
+    {{- include "hazel.dev.caInitContainerForComponent" (dict "component" "cms" "root" .) | nindent 4 }}
     {{- end }}
     container:
-      image: {{ include "openedx.image" (dict "component" "cms" "root" .) }}
-      imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "cms" "root" .) }}
+      image: {{ include "hazel.image" (dict "component" "cms" "root" .) }}
+      imagePullPolicy: {{ include "hazel.imagePullPolicy" (dict "component" "cms" "root" .) }}
 
       command: ["/bin/bash", "-c"]
       args:
         - |
           set -e
-          cd /openedx/edx-platform
+          cd /hazel/edx-platform
 
           echo "Loading settings $DJANGO_SETTINGS_MODULE"
 
-          {{ include "openedx.dev.startupScript" . | nindent 10 }}
+          {{ include "hazel.dev.startupScript" . | nindent 10 }}
 
           ./manage.py cms migrate
 
           # Fix incorrect uploaded file path
-          if [ -d /openedx/data/uploads/ ]; then
-            if [ -n "$(ls -A /openedx/data/uploads/)" ]; then
+          if [ -d /hazel/data/uploads/ ]; then
+            if [ -n "$(ls -A /hazel/data/uploads/)" ]; then
               echo "Migrating CMS uploaded files to shared directory"
-              mv /openedx/data/uploads/* /openedx/media/
-              rm -rf /openedx/data/uploads/
+              mv /hazel/data/uploads/* /hazel/media/
+              rm -rf /hazel/data/uploads/
             fi
           fi
 
@@ -330,32 +330,32 @@ spec:
           value: cms
         - name: DJANGO_SETTINGS_MODULE
           value: cms.envs.tutor.production
-        {{- include "openedx.common.env" . | nindent 8 }}
-        {{- include "openedx.cms.env" . | nindent 8 }}
+        {{- include "hazel.common.env" . | nindent 8 }}
+        {{- include "hazel.cms.env" . | nindent 8 }}
 
       volumeMounts:
-        {{- include "openedx.common.volumeMounts" . | nindent 8 }}
-        {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
-        {{- include "openedx.dev.caVolumeMounts" . | nindent 8 }}
-        - mountPath: /openedx/media
+        {{- include "hazel.common.volumeMounts" . | nindent 8 }}
+        {{- include "hazel.dev.volumeMounts" . | nindent 8 }}
+        {{- include "hazel.dev.caVolumeMounts" . | nindent 8 }}
+        - mountPath: /hazel/media
           name: media-storage
     volumes:
-      {{- include "openedx.common.volumes" . | nindent 6 }}
-      {{- include "openedx.dev.volumes" . | nindent 6 }}
-      {{- include "openedx.dev.caVolumes" . | nindent 6 }}
+      {{- include "hazel.common.volumes" . | nindent 6 }}
+      {{- include "hazel.dev.volumes" . | nindent 6 }}
+      {{- include "hazel.dev.caVolumes" . | nindent 6 }}
       - name: media-storage
         emptyDir: {}
 
   - name: mfe-init
     container:
-      image: {{ include "openedx.image" (dict "component" "lms" "root" .) }}
-      imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "lms" "root" .) }}
+      image: {{ include "hazel.image" (dict "component" "lms" "root" .) }}
+      imagePullPolicy: {{ include "hazel.imagePullPolicy" (dict "component" "lms" "root" .) }}
 
       command: ["/bin/bash", "-c"]
       args:
         - |
           set -e
-          cd /openedx/edx-platform
+          cd /hazel/edx-platform
           # MFE-specific tasks
           ./manage.py lms waffle_flag --list > /tmp/lms_waffle_flags.txt
 
@@ -404,23 +404,23 @@ spec:
           value: lms
         - name: DJANGO_SETTINGS_MODULE
           value: lms.envs.tutor.production
-        {{- include "openedx.common.env" . | nindent 8 }}
+        {{- include "hazel.common.env" . | nindent 8 }}
 
       volumeMounts:
-        {{- include "openedx.common.volumeMounts" . | nindent 8 }}
-        {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
-        - mountPath: /openedx/media
+        {{- include "hazel.common.volumeMounts" . | nindent 8 }}
+        {{- include "hazel.dev.volumeMounts" . | nindent 8 }}
+        - mountPath: /hazel/media
           name: media-storage
     volumes:
-      {{- include "openedx.common.volumes" . | nindent 6 }}
-      {{- include "openedx.dev.volumes" . | nindent 6 }}
+      {{- include "hazel.common.volumes" . | nindent 6 }}
+      {{- include "hazel.dev.volumes" . | nindent 6 }}
       - name: media-storage
         emptyDir: {}
 
   - name: notes-user-init
     container:
-      image: {{ include "openedx.image" (dict "component" "lms" "root" .) }}
-      imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "lms" "root" .) }}
+      image: {{ include "hazel.image" (dict "component" "lms" "root" .) }}
+      imagePullPolicy: {{ include "hazel.imagePullPolicy" (dict "component" "lms" "root" .) }}
 
       command: ["/bin/bash", "-c"]
       args:
@@ -429,9 +429,9 @@ spec:
           # Modify users created an incorrect email and that might clash with the newly created users
           ./manage.py lms shell -c \
             "from django.contrib.auth import get_user_model;\
-            get_user_model().objects.filter(username='notes').exclude(email='notes@openedx').update(email='notes@openedx')"
+            get_user_model().objects.filter(username='notes').exclude(email='notes@hazel').update(email='notes@hazel')"
 
-          ./manage.py lms manage_user notes notes@openedx --staff --superuser
+          ./manage.py lms manage_user notes notes@hazel --staff --superuser
           ./manage.py lms create_dot_application \
               notes \
               notes \
@@ -446,37 +446,37 @@ spec:
         - name: DJANGO_SETTINGS_MODULE
           value: lms.envs.tutor.production
         - name: NOTES_SERVICE_NAME
-          value: {{ .Values.openedx.notes.service.name | quote }}
+          value: {{ .Values.hazel.notes.service.name | quote }}
         - name: NOTES_SERVICE_PORT
-          value: {{ .Values.openedx.notes.service.port | quote }}
-        {{- include "openedx.common.env" . | nindent 8 }}
+          value: {{ .Values.hazel.notes.service.port | quote }}
+        {{- include "hazel.common.env" . | nindent 8 }}
         - name: SECRET_KEY
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.openedx.notes.secretKey.secretName }}
-              key: {{ .Values.openedx.notes.secretKey.secretKey }}
+              name: {{ .Values.hazel.notes.secretKey.secretName }}
+              key: {{ .Values.hazel.notes.secretKey.secretKey }}
 
         - name: SOCIAL_AUTH_NOTES_OAUTH2_SECRET
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.openedx.notes.socialAuthEdxOauth2Secret.secretName }}
-              key: {{ .Values.openedx.notes.socialAuthEdxOauth2Secret.secretKey }}
+              name: {{ .Values.hazel.notes.socialAuthEdxOauth2Secret.secretName }}
+              key: {{ .Values.hazel.notes.socialAuthEdxOauth2Secret.secretKey }}
 
       volumeMounts:
-        {{- include "openedx.common.volumeMounts" . | nindent 8 }}
-        {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
-        - mountPath: /openedx/media
+        {{- include "hazel.common.volumeMounts" . | nindent 8 }}
+        {{- include "hazel.dev.volumeMounts" . | nindent 8 }}
+        - mountPath: /hazel/media
           name: media-storage
     volumes:
-      {{- include "openedx.common.volumes" . | nindent 6 }}
-      {{- include "openedx.dev.volumes" . | nindent 6 }}
+      {{- include "hazel.common.volumes" . | nindent 6 }}
+      {{- include "hazel.dev.volumes" . | nindent 6 }}
       - name: media-storage
         emptyDir: {}
 
   - name: notes-index-init
     container:
-      image: {{ include "openedx.image" (dict "component" "notes" "root" .) }}
-      imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "notes" "root" .) }}
+      image: {{ include "hazel.image" (dict "component" "notes" "root" .) }}
+      imagePullPolicy: {{ include "hazel.imagePullPolicy" (dict "component" "notes" "root" .) }}
 
       command: ["/bin/bash", "-c"]
       args:
@@ -487,7 +487,7 @@ spec:
           # Re-index with meilisearch
           ./manage.py shell -c "from notesapi.v1.views.meilisearch import reindex; reindex()"
       env:
-        {{- include "openedx.notes.env" . | nindent 8 }}
+        {{- include "hazel.notes.env" . | nindent 8 }}
       volumeMounts:
         - mountPath: /app/edx-notes-api/notesserver/settings/tutor.py
           name: settings

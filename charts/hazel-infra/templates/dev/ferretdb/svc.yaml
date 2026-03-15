@@ -5,7 +5,7 @@ metadata:
   name: ferretdb-nodeport
   labels:
     app.kubernetes.io/name: ferretdb
-    {{- include "openedxinfra.labels" . | nindent 4 }}
+    {{- include "hazelinfra.labels" . | nindent 4 }}
 
 spec:
   type: NodePort
@@ -17,5 +17,5 @@ spec:
     targetPort: {{ .Values.ferretdb.application.port }}
 
   selector:
-    {{- include "openedxinfra.componentSelectorLabels" (dict "component" "ferretdb" "root" .) | nindent 4 }}
+    {{- include "hazelinfra.componentSelectorLabels" (dict "component" "ferretdb" "root" .) | nindent 4 }}
 {{- end -}}

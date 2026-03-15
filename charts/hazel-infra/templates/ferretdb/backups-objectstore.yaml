@@ -4,9 +4,9 @@ kind: ObjectStore
 metadata:
   name: {{ .Values.ferretdb.backups.barmanObjectName | default "s3-store-documentdb" }}
   annotations:
-    {{- include "openedxinfra.annotations" . | nindent 4 }}
+    {{- include "hazelinfra.annotations" . | nindent 4 }}
   labels:
-    {{- include "openedxinfra.componentLabels" (dict "component" "ferretdb" "root" .) | nindent 4 }}
+    {{- include "hazelinfra.componentLabels" (dict "component" "ferretdb" "root" .) | nindent 4 }}
 spec:
   retentionPolicy: {{ .Values.ferretdb.backups.retention | default "7d" | quote }}
   configuration:

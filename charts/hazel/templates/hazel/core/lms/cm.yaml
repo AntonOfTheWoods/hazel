@@ -1,12 +1,12 @@
-{{- if and .Values.openedx.enabled .Values.openedx.lms.enabled -}}
+{{- if and .Values.hazel.enabled .Values.hazel.lms.enabled -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: openedx-settings-lms
+  name: hazel-settings-lms
   annotations:
-    {{- include "openedx.annotations" . | nindent 4 }}
+    {{- include "hazel.annotations" . | nindent 4 }}
   labels:
-    {{- include "openedx.componentLabels" (dict "component" "lms" "root" .) | nindent 4 }}
+    {{- include "hazel.componentLabels" (dict "component" "lms" "root" .) | nindent 4 }}
 data:
   __init__.py: ""
 
@@ -14,7 +14,7 @@ data:
     # -*- coding: utf-8 -*-
     from lms.envs.production import *
 
-    {{- include "openedx.common.shared" . | nindent 4 }}
+    {{- include "hazel.common.shared" . | nindent 4 }}
 
     ######## Common LMS settings
     LOGIN_REDIRECT_WHITELIST = [CMS_HOST]
@@ -88,7 +88,7 @@ data:
     # PROFILE_IMAGE_BACKEND = {
     #     "class": DEFAULT_FILE_STORAGE,
     #     "options": {
-    #         "bucket_name": "openedx",
+    #         "bucket_name": "hazel",
     #         "location": PROFILE_IMAGE_BACKEND["options"]["location"].lstrip("/"),
     #     },
     # }
@@ -120,7 +120,7 @@ data:
     SEARCH_SKIP_ENROLLMENT_START_DATE_FILTERING = True
 
     # Dynamic config API settings
-    # https://openedx.github.io/frontend-platform/module-Config.html
+    # https://hazel.github.io/frontend-platform/module-Config.html
     MFE_CONFIG = {
         "BASE_URL": MFE_HOST,
         "CSRF_TOKEN_API_PATH": "/csrf/api/v1/token",
@@ -128,7 +128,7 @@ data:
         "DISCOVERY_API_BASE_URL": os.environ.get('DISCOVERY_HOST') and f"https://{os.environ['DISCOVERY_HOST']}" or "",
         "FAVICON_URL": f"https://{LMS_HOST}/favicon.ico",
         "INFO_EMAIL": f"{os.environ['CONTACT_EMAIL']}",
-        "LANGUAGE_PREFERENCE_COOKIE_NAME": "openedx-language-preference",
+        "LANGUAGE_PREFERENCE_COOKIE_NAME": "hazel-language-preference",
         "LMS_BASE_URL": f"https://{LMS_HOST}",
         "LOGIN_URL": f"https://{LMS_HOST}/login",
         "LOGO_URL": f"https://{LMS_HOST}/theming/asset/images/logo.png",
@@ -216,8 +216,8 @@ data:
     # Enable catalog microfrontend
     ENABLE_CATALOG_MICROFRONTEND = True
 
-    {{- if .Values.openedx.lms.extraDjangoSettings }}
-    {{ .Values.openedx.lms.extraDjangoSettings | nindent 4 }}
+    {{- if .Values.hazel.lms.extraDjangoSettings }}
+    {{ .Values.hazel.lms.extraDjangoSettings | nindent 4 }}
     {{- end }}
 
 {{- end -}}

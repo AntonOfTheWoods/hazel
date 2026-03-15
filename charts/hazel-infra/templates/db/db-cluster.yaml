@@ -4,11 +4,11 @@ kind: Cluster
 metadata:
   name: {{ .Values.db.cluster.name | default "db-cluster" }}
   annotations:
-    {{- include "openedxinfra.annotations" . | nindent 4 }}
+    {{- include "hazelinfra.annotations" . | nindent 4 }}
     # required for seamless bootstrap: https://github.com/cloudnative-pg/cloudnative-pg/issues/5778#issuecomment-2783417464
     cnpg.io/skipEmptyWalArchiveCheck: "enabled"
   labels:
-    {{- include "openedxinfra.componentLabels" (dict "component" "db" "root" .) | nindent 4 }}
+    {{- include "hazelinfra.componentLabels" (dict "component" "db" "root" .) | nindent 4 }}
 
 spec:
   instances: {{ .Values.db.cluster.instances | default 1 }}
@@ -38,10 +38,10 @@ spec:
   {{- else }}
   # To bootstrap a new database (needs supabase-migratejob.yaml afterwards)
     initdb:
-      database: {{ .Values.db.cluster.bootstrap.dbName | default "openedx" }}
-      owner: {{ .Values.db.cluster.bootstrap.dbOwner | default "openedx" }}
+      database: {{ .Values.db.cluster.bootstrap.dbName | default "hazel" }}
+      owner: {{ .Values.db.cluster.bootstrap.dbOwner | default "hazel" }}
       secret:
-        name: {{ .Values.db.cluster.user.credentials | default "openedx-db-credentials" }}
+        name: {{ .Values.db.cluster.user.credentials | default "hazel-db-credentials" }}
   {{- end }}
 
   {{- if and .Values.db.cluster.walArchive.enabled .Values.db.cluster.walArchive.barmanObjectName }}

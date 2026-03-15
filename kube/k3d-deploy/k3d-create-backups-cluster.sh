@@ -50,8 +50,8 @@ docker exec -i ${BACKUPS_CONTEXT}-server-0 sysctl -w net.ipv6.conf.all.disable_i
 
 echo -e "apiVersion: v1\nkind: Namespace\nmetadata:\n  name: ${BACKUPS_NAMESPACE}" | kubectl \
   --context ${BACKUPS_CONTEXT} apply -f -
-kubectl --context ${BACKUPS_CONTEXT} -n ${BACKUPS_NAMESPACE} apply -f ${SCRIPT_DIR}/secrets/openedx-backups/
-kubectl --context ${BACKUPS_CONTEXT} -n ${BACKUPS_NAMESPACE} apply -f ${SCRIPT_DIR}/secrets/openedx-shared/
+kubectl --context ${BACKUPS_CONTEXT} -n ${BACKUPS_NAMESPACE} apply -f ${SCRIPT_DIR}/secrets/hazel-backups/
+kubectl --context ${BACKUPS_CONTEXT} -n ${BACKUPS_NAMESPACE} apply -f ${SCRIPT_DIR}/secrets/hazel-shared/
 
 helmfile --kube-context ${BACKUPS_CONTEXT} -f ${SCRIPT_DIR}/../helmfile/helmfile-backups.yaml.gotmpl --environment dev \
   sync --include-transitive-needs

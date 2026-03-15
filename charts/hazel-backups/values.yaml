@@ -18,11 +18,11 @@ minio:
 
     # FIXME: these MUST be found and set properly elsewhere too!!!
     buckets:
-      - name: openedx-storage
+      - name: hazel-storage
         versioning: true
-      - name: openedx-db-backups
+      - name: hazel-db-backups
         versioning: false
-      - name: openedx-documentdb-backups
+      - name: hazel-documentdb-backups
         versioning: false
 
   tenant:
