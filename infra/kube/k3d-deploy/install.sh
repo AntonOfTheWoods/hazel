@@ -9,7 +9,8 @@ echo "Installing helm charts for ${APPNAME} in namespace ${NAMESPACE}"
 
 export LB_IP=$(docker network inspect ${NETWORK} | jq -r ".[].Containers[] | select(.Name == \"k3d-${CLUSTERNAME}-serverlb\") | .IPv4Address | split(\"/\")[0]")
 export GATEWAY_IP=$(docker network inspect ${NETWORK} | jq -r ".[].IPAM.Config[0].Gateway")
-export BACKUPS_LB_IP=$(docker network inspect ${NETWORK} | jq -r ".[].Containers[] | select(.Name == \"k3d-${BACKUPS_CLUSTERNAME}-serverlb\") | .IPv4Address | split(\"/\")[0]")
+# export BACKUPS_LB_IP=$(docker network inspect ${NETWORK} | jq -r ".[].Containers[] | select(.Name == \"k3d-${BACKUPS_CLUSTERNAME}-serverlb\") | .IPv4Address | split(\"/\")[0]")
+export BACKUPS_LB_IP=127.0.0.1
 export S3_HOST=files.${LOCALHOST_NAME}
 export BACKUPS_HOST=backups.${LOCALHOST_NAME}
 
