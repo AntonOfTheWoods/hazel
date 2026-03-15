@@ -10,7 +10,7 @@
 set -e
 echo '---'
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-source ${SCRIPT_DIR}/../../vars.sh
+source ${SCRIPT_DIR}/../vars.local
 echo "Creating k3d cluster for ${CLUSTERNAME}"
 
 mkdir -p ${SCRIPT_DIR}/volumes
@@ -51,7 +51,7 @@ k3d cluster create ${CLUSTERNAME} --config ${SCRIPT_DIR}/k3d-config.yml \
   --network ${NETWORK} \
   --k3s-arg "--kube-controller-manager-arg=node-cidr-mask-size-ipv4=21@server:*" \
   --volume ${SCRIPT_DIR}/volumes:/opt/${APPNAME}/volumes@all \
-  --volume ${SCRIPT_DIR}/../../workspaces/mnt:/mnt@all
+  --volume ${SCRIPT_DIR}/../../apps:/apps@all
 
 # TODO: put this back when we have a better solution for local volumes
 # declare -a DIRECTORIES=(${APPNAME}-db ${APPNAME}-documentdb ${APPNAME}-minio ${APPNAME}-backups ${APPNAME}-meilisearch)
@@ -94,7 +94,7 @@ export BACKUPS_HOST=backups.${LOCALHOST_NAME}
 echo "Load balancer IP address detected: ${LB_IP}, backups LB IP: ${BACKUPS_LB_IP}"
 
 # helmfile --kubeconfig ${KUBECONFIG} --kube-context ${MAIN_CONTEXT} --environment dev \
-#   -f ${SCRIPT_DIR}/../helmfile/helmfile-cluster-infra.yaml.gotmpl sync --include-transitive-needs
+#   -f ${SCRIPT_DIR}/../helmfile/helmfile-cluster.yaml.gotmpl sync --include-transitive-needs
 
 # helmfile --kubeconfig ${KUBECONFIG} --kube-context ${MAIN_CONTEXT} --environment dev \
 #   -f ${SCRIPT_DIR}/../helmfile/helmfile.yaml.gotmpl sync --include-transitive-needs

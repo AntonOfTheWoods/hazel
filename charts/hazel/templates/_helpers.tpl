@@ -266,9 +266,6 @@ Shared environment variables
   value: {{ .Values.hazel.notes.service.port | quote }}
 - name: PLATFORM_NAME
   value: {{ .Values.hazel.platformName | quote }}
-# FIXME: do we need this?
-# - name: CONTACT_MAILING_ADDRESS
-#   value: "contact@local.hazel.io"
 - name: CONTACT_EMAIL
   value: {{ .Values.hazel.contactEmail | quote }}
 

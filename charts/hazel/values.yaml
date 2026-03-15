@@ -2,6 +2,9 @@
 global:
   instanceId: "hazel-instance"
   imagePullSecrets: []
+  namespace: hazel
+  hazelVersion: "1.0.1"
+  redirectHttp: true
 
 project:
   local:

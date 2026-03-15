@@ -17,24 +17,24 @@ project:
 #     api:
 #       enabled: true
 #       ingressClassName: "traefik"
-#       host: files.local.hazel.io
+#       host: files.hazel.localhost
 #       path: /
 #       pathType: Prefix
 #       annotations:
 #         cert-manager.io/cluster-issuer: mkcert-issuer
 #       tls:
 #         - hosts:
-#             - files.local.hazel.io
-#           secretName: hazel-files-local-hazel-io-cert
+#             - files.hazel.localhost
+#           secretName: hazel-files-local-hazel-cert
 #     console:
 #       enabled: true
 #       ingressClassName: "traefik"
-#       host: minio-console.local.hazel.io
+#       host: minio-console.hazel.localhost
 #       path: /
 #       pathType: Prefix
 #       annotations:
 #         cert-manager.io/cluster-issuer: mkcert-issuer
 #       tls:
 #         - hosts:
-#             - minio-console.local.hazel.io
-#           secretName: hazel-minio-studio-local-hazel-io-cert
+#             - minio-console.hazel.localhost
+#           secretName: hazel-minio-studio-local-hazel-cert

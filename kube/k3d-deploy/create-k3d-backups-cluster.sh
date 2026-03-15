@@ -10,7 +10,7 @@
 # set -e
 echo '---'
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-source ${SCRIPT_DIR}/../../vars.sh
+source ${SCRIPT_DIR}/../vars.local
 echo "Creating k3d cluster for ${BACKUPS_CLUSTERNAME}"
 
 mkdir -p ${SCRIPT_DIR}/volumes

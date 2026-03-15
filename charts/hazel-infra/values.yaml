@@ -1,6 +1,6 @@
 global:
   namespace: hazel
-  hazelVersion: "20.0.1-main"
+  hazelVersion: "1.0.1"
   instanceId: "hazel-instance"
   redirectHttp: true
 
@@ -22,12 +22,12 @@ hazel:
       # - server: https://acme-staging-v02.api.letsencrypt.org/directory
       #   name: "letsencrypt-staging"
       #   kind: "Issuer"
-      #   email: "certs@local.hazel.io"
+      #   email: "certs@hazel.localhost"
       #   privateKeySecretRef: "le-key-staging"
       # - server: https://acme-v02.api.letsencrypt.org/directory
       #   name: "letsencrypt-prod"
       #   kind: "Issuer"
-      #   email: "certs@local.hazel.io"
+      #   email: "certs@hazel.localhost"
       #   privateKeySecretRef: "le-key-prod"
 
 # Common labels and annotations
@@ -48,7 +48,7 @@ db:
     retention: 7d          # keep 7 backups
     barmanObjectName: s3-store-db
     destinationPath: "hazel-db-backups"
-    host: backups.local.hazel.io
+    host: backups.hazel.localhost
     port: 80
     useSSL: false
     walCompression: bzip2  # bzip2;gzip;lz4;snappy;xz;zstd
@@ -126,7 +126,7 @@ ferretdb:
     retention: "7d"           # keep 7 backups
     barmanObjectName: s3-store-documentdb
     destinationPath: "hazel-documentdb-backups"
-    host: backups.local.hazel.io
+    host: backups.hazel.localhost
     port: 80
     useSSL: false
     walCompression: bzip2  # bzip2;gzip;lz4;snappy;xz;zstd
@@ -186,39 +186,6 @@ ferretdb:
       #   passwordSecret:
       #     name: notes-db-credentials
 
-meilisearch:
-  enabled: true
-  environment:
-    MEILI_NO_ANALYTICS: true
-    # DO NOT CHANGE THE FOLLOWING LINE UNLESS YOU KNOW WHAT YOU ARE DOING!
-    MEILI_ENV: production
-  service:
-    type: ClusterIP
-    port: 7700
-  auth:
-    # DO NOT CHANGE THE FOLLOWING LINE UNLESS YOU KNOW WHAT YOU ARE DOING!
-    # The secret must contain the key: MEILI_MASTER_KEY
-    existingMasterKeySecret: "meili-master"
-
-  ingress:
-    enabled: true
-    className: "traefik"
-    annotations: {}
-    path: /
-    hosts:
-      - meilisearch.local.hazel.io
-    tls: []
-    #  - secretName: chart-example-tls
-    #    hosts:
-    #      - chart-example.local
-
-  persistence:
-    enabled: true
-    accessMode: ReadWriteOnce
-    # storageClass: ~
-    existingClaim: ""
-    size: 5Gi
-
 minio:
   enabled: true
   extendedOperator:
@@ -277,7 +244,7 @@ minio:
       labels: { }
       annotations: { }
       tls: [ ]
-      host: files.local.hazel.io
+      host: files.hazel.localhost
       path: /
       pathType: Prefix
     console:
@@ -286,7 +253,7 @@ minio:
       labels: { }
       annotations: { }
       tls: [ ]
-      host: minio-console.local.hazel.io
+      host: minio-console.hazel.localhost
       path: /
       pathType: Prefix
 
@@ -294,4 +261,5 @@ redis:
   enabled: true
   redisStandalone:
     name: redis  # apparently MUST be set or it will default to the release name
-    tag: "v7.4.5"
+    tag: "v7.4.8"
+    # tag: "v8.4.2"

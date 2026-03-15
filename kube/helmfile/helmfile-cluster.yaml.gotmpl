@@ -4,6 +4,10 @@ environments:
   production:
 ---
 
+repositories:
+- name: ot-helm
+  url: https://ot-container-kit.github.io/helm-charts/
+
 helmDefaults:
   wait: true
   waitForJobs: true
@@ -14,9 +18,11 @@ templates:
 {{ readFile "blocks/cnpg-tmpl.yaml" | indent 2 }}
 {{ readFile "blocks/traefik-tmpl.yaml" | indent 2 }}
 {{ readFile "blocks/garage-tmpl.yaml" | indent 2 }}
+{{ readFile "blocks/redis-tmpl.yaml" | indent 2 }}
 
 releases:
   - <<: *garage
+  - <<: *redis
   - <<: *argo
     values:
       - "./values/argo-values.yaml"
