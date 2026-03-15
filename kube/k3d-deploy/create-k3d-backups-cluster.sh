@@ -25,8 +25,7 @@ fi
 EXISTING_NETWORK=$(docker network ls | grep " ${NETWORK} ")
 if [ -z "${EXISTING_NETWORK}" ]; then
   echo "Network ${NETWORK} not found, creating"
-  # docker network create --opt com.docker.network.driver.mtu=1400 ${NETWORK}
-  docker network create --opt com.docker.network.driver.mtu=1400 --driver bridge --subnet 172.18.0.0/24 --gateway 172.18.0.1 ${NETWORK}
+  docker network create --opt com.docker.network.driver.mtu=1400 --driver bridge --subnet ${NETWORK_ROOT}.0/24 --gateway ${NETWORK_ROOT}.1 ${NETWORK}
 fi
 
 if [ -z "${K3S_IMAGE_NAME}" ]; then

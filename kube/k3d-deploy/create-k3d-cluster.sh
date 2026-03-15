@@ -25,7 +25,6 @@ fi
 EXISTING_NETWORK=$(docker network ls | grep " ${NETWORK} " || [[ $? == 1 ]])
 if [ -z "${EXISTING_NETWORK}" ]; then
   echo "Network ${NETWORK} not found, creating"
-  # docker network create --opt com.docker.network.driver.mtu=1400 ${NETWORK}
   docker network create --opt com.docker.network.driver.mtu=1400 --driver bridge --subnet ${NETWORK_ROOT}.0/24 --gateway ${NETWORK_ROOT}.1 ${NETWORK}
 fi
 
@@ -94,8 +93,8 @@ export BACKUPS_HOST=backups.${LOCALHOST_NAME}
 
 echo "Load balancer IP address detected: ${LB_IP}, backups LB IP: ${BACKUPS_LB_IP}"
 
-helmfile --kubeconfig ${KUBECONFIG} --kube-context ${MAIN_CONTEXT} --environment dev \
-  -f ${SCRIPT_DIR}/../helmfile/helmfile-cluster-infra.yaml.gotmpl sync --include-transitive-needs
+# helmfile --kubeconfig ${KUBECONFIG} --kube-context ${MAIN_CONTEXT} --environment dev \
+#   -f ${SCRIPT_DIR}/../helmfile/helmfile-cluster-infra.yaml.gotmpl sync --include-transitive-needs
 
 # helmfile --kubeconfig ${KUBECONFIG} --kube-context ${MAIN_CONTEXT} --environment dev \
 #   -f ${SCRIPT_DIR}/../helmfile/helmfile.yaml.gotmpl sync --include-transitive-needs
