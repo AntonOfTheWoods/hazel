@@ -179,6 +179,8 @@ minio:
       pathType: Prefix
 
 redis:
+  externalConfig:
+    enabled: true
   enabled: true
   redisStandalone:
     name: redis  # apparently MUST be set or it will default to the release name

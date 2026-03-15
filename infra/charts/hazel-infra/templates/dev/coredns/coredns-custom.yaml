@@ -1,6 +1,6 @@
 {{- if and .Values.hazel.isDev .Values.hazel.dev.files.lbIP .Values.hazel.dev.backups.lbIP -}}
 {{- $domains := (list .Values.minio.ingress.api.host ) | uniq -}}
-{{- $backupsDomains := (list .Values.db.backups.host .Values.ferretdb.backups.host) | uniq -}}
+{{- $backupsDomains := (list .Values.db.backups.host ) | uniq -}}
 {{- $allDomains := (concat $domains $backupsDomains) | uniq -}}
 apiVersion: v1
 kind: ConfigMap

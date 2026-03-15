@@ -51,7 +51,7 @@ k3d cluster create ${CLUSTERNAME} --config ${SCRIPT_DIR}/k3d-config.yml \
   --network ${NETWORK} \
   --k3s-arg "--kube-controller-manager-arg=node-cidr-mask-size-ipv4=21@server:*" \
   --volume ${SCRIPT_DIR}/volumes:/opt/${APPNAME}/volumes@all \
-  --volume ${SCRIPT_DIR}/../../apps:/apps@all
+  --volume ${SCRIPT_DIR}/../../../apps:/apps@all
 
 # TODO: put this back when we have a better solution for local volumes
 # declare -a DIRECTORIES=(${APPNAME}-db ${APPNAME}-documentdb ${APPNAME}-minio ${APPNAME}-backups ${APPNAME}-meilisearch)
