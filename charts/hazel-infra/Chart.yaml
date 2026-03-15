@@ -1,6 +1,6 @@
 apiVersion: v2
 name: hazel-infra
-description: A Helm chart for Open edX platform infrastructure
+description: A Helm chart for hazelchat platform infrastructure
 type: application
 version: 0.1.0
 appVersion: "v1"
@@ -17,11 +17,11 @@ maintainers:
     url: https://github.com/AntonOfTheWoods
 
 dependencies:
-  - name: tenant
-    version: "7.x.x"
-    repository: "https://operator.min.io/"
-    alias: minio
-    condition: minio.enabled
+  # - name: tenant
+  #   version: "7.x.x"
+  #   repository: "https://operator.min.io/"
+  #   alias: minio
+  #   condition: minio.enabled
 
   - name: redis
     version: "0.16.x"

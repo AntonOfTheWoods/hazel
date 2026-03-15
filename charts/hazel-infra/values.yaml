@@ -67,7 +67,7 @@ db:
     instances: 1
     image:
       repository: "ghcr.io/cloudnative-pg/postgresql"
-      tag: "18-standard-trixie"
+      tag: "18-minimal-trixie"
       pullPolicy: IfNotPresent
     superuser:
       credentials: db-super-credentials
@@ -107,87 +107,8 @@ db:
       #   passwordSecret:
       #     name: notes-db-credentials
 
-ferretdb:
-  enabled: true
-  application:
-    image:
-      repository: ghcr.io/ferretdb/ferretdb
-      tag: 2.7.0
-      pullPolicy: IfNotPresent
-    port: 27017
-  service:
-    name: mongodb
-    type: ClusterIP
-    port: 27017
-  auth: "true" # "true" or "false", whether to enable authentication in FerretDB
-  backups:
-    enabled: true
-    schedule: "0 0 2 * * *"  # At 02:00:00 (UTC) every day
-    retention: "7d"           # keep 7 backups
-    barmanObjectName: s3-store-documentdb
-    destinationPath: "hazel-documentdb-backups"
-    host: backups.hazel.localhost
-    port: 80
-    useSSL: false
-    walCompression: bzip2  # bzip2;gzip;lz4;snappy;xz;zstd
-    dataCompression: bzip2  # bzip2;gzip;snappy
-    s3Credentials:
-      accessKeyId:
-        name: s3-backups
-        key: username
-      secretAccessKey:
-        name: s3-backups
-        key: password
-
-  cluster:
-    enabled: true
-    name: documentdb-cluster
-    instances: 1
-    image:
-      repository: "ghcr.io/ferretdb/postgres-documentdb"
-      tag: "17-0.107.0-ferretdb-2.7.0"
-      pullPolicy: IfNotPresent
-    superuser:
-      credentials: documentdb-super-credentials
-    user:
-      credentials: documentdb-db-credentials
-
-    storage:
-      size: 5Gi
-
-    managed:
-      services:
-        disabledDefaultServices: ["ro", "r"]
-
-    # # To bootstrap a new database
-    bootstrap:
-      enabled: true
-      dbName: ferretdb
-      dbOwner: ferret
-      recovery:
-        # To restore from a backup
-        # backupSource: true
-        barmanObjectName: "s3-store-documentdb"
-
-    walArchive:
-      enabled: true
-      barmanObjectName: s3-store-documentdb
-
-    extraRoles: []
-      # example:
-      # - name: notes
-      #   ensure: present
-      #   comment: "hazel Application User"
-      #   login: true
-      #   createdb: true
-      #   createrole: false
-      #   replication: false
-      #   bypassrls: false
-      #   passwordSecret:
-      #     name: notes-db-credentials
-
 minio:
-  enabled: true
+  enabled: false
   extendedOperator:
     # Set this to create a user for hazel to use for storage
     # The secret with this name must exist and contain keys `secretKey`

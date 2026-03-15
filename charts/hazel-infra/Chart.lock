@@ -1,9 +1,6 @@
 dependencies:
-- name: tenant
-  repository: https://operator.min.io/
-  version: 7.1.1
 - name: redis
   repository: https://ot-container-kit.github.io/helm-charts/
   version: 0.16.9
-digest: sha256:f513318730597a8211754e35261cb0d67bfcebfde9c6d9deaca933075c7b69a2
-generated: "2026-03-15T08:46:04.770079351+08:00"
+digest: sha256:23edecb9277c4c96c497ee845479c7ba20ba6b0aa57ae1b3d8606db3afbf7ab6
+generated: "2026-03-15T10:01:14.852167339+08:00"
