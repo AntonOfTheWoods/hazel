@@ -250,24 +250,6 @@ Shared environment variables
 */}}
 {{- define "hazel.common.env" -}}
 # Shared settings
-- name: LMS_HOST
-  value: {{ .Values.hazel.lms.host | quote }}
-- name: PREVIEW_HOST
-  value: {{ .Values.hazel.preview.host | quote }}
-- name: CMS_HOST
-  value: {{ .Values.hazel.cms.host | quote }}
-- name: MFE_HOST
-  value: {{ .Values.hazel.mfe.host | quote }}
-- name: NOTES_HOST
-  value: {{ .Values.hazel.notes.host | quote }}
-- name: NOTES_SERVICE_HOST
-  value: {{ .Values.hazel.notes.service.name | quote }}
-- name: NOTES_SERVICE_PORT
-  value: {{ .Values.hazel.notes.service.port | quote }}
-- name: PLATFORM_NAME
-  value: {{ .Values.hazel.platformName | quote }}
-- name: CONTACT_EMAIL
-  value: {{ .Values.hazel.contactEmail | quote }}
 
 - name: KV_ENGINE
   value: {{ .Values.hazel.cache.backend.engine | quote }}
@@ -515,4 +497,41 @@ Shared common volumes
 {{- define "hazel.imagePullSecrets" -}}
 # FIXME: fill this with real values!!!
 {{ include "common.images.pullSecrets" (dict "images" (list  .Values.hazel.something.image .Values.hazel.somethingelse.image) "global" .Values.global) }}
+{{- end -}}
+
+{{/*
+reusable db env vars
+*/}}
+{{- define "hazel.database.envvars" }}
+- name: DB_USER
+  value: {{ include "supabase.database.user" . | quote }}
+- name: DB_HOST
+  value: {{ include "supabase.database.host" . | quote }}
+- name: DB_PORT
+  value: {{ include "supabase.database.port" . | quote }}
+- name: DB_NAME
+  value: {{ include "supabase.database.name" . | quote }}
+- name: DB_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "supabase.database.secretName" . }}
+      key: {{ include "supabase.database.passwordKey" . | quote }}
+- name: DB_SSL
+  value: {{ .Values.dbSSL | quote }}
+
+# vanilla postgres env vars
+- name: PGDATABASE
+  value: {{ include "supabase.database.name" . | quote }}
+- name: PGUSER
+  value: {{ include "supabase.database.user" . | quote }}
+- name: PGPASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "supabase.database.secretName" . }}
+      key: {{ include "supabase.database.passwordKey" . | quote }}
+- name: PGHOST
+  value: {{ include "supabase.database.host" . | quote }}
+- name: PGPORT
+  value: {{ include "supabase.database.port" . | quote }}
+
 {{- end -}}

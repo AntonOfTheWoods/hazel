@@ -1,0 +1,20 @@
+{{- if and .Values.hazel.enabled .Values.hazel.backend.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.hazel.backend.service.name | default "backend" }}
+  annotations:
+    {{- include "hazel.annotations" . | nindent 4 }}
+  labels:
+    {{- include "hazel.componentLabels" (dict "component" "backend" "root" .) | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+  - port: {{ .Values.hazel.backend.service.port | default 8000 }}
+    protocol: TCP
+    targetPort: {{ .Values.hazel.backend.application.port | default 8000 }}
+  selector:
+    {{- include "hazel.componentSelectorLabels" (dict "component" "backend" "root" .) | nindent 4 }}
+status:
+  loadBalancer: {}
+{{- end -}}

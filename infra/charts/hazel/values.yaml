@@ -6,6 +6,14 @@ global:
   hazelVersion: "1.0.1"
   redirectHttp: true
 
+psqlImage:
+  # should already be in the cluster from the db cluster setup, so no need to pull
+  # ghcr.io/cloudnative-pg/postgresql:18-minimal-trixie
+  registry: docker.io
+  repository: postgres
+  tag: 18-alpine
+  pullPolicy: IfNotPresent
+
 project:
   local:
     enableNodePorts: false
@@ -30,23 +38,50 @@ hazel:
     # This will be done automatically if using the kube scripts
     src: true
 
-
   web:
-    localRoutes: []
+    localRoutes: ["/"]
   botgateway:
-    localRoutes: []
+    localRoutes: ["/"]
   docs:
-    localRoutes: []
+    localRoutes: ["/"]
   cluster:
-    localRoutes: []
+    localRoutes: ["/"]
   backend:
-    localRoutes: []
+    enabled: true
+    replicas: 1
+
+    # command: []
+    # args: []
+    diagnosticMode:
+      enabled: false
+
+    host: backend.hazel.localhost
+    existingTlsSecretName: ""  # if set, will use this TLS secret directly
+    # should match one of the cert-manager issuers above if using builtin cert-manager
+    tlsIssuerName: "letsencrypt-staging"
+    tlsIssuerKind: "Issuer"
+
+    application:
+      name: backend
+      port: 8000
+      maxRequests: 1000
+    service:
+      name: backend
+      port: 8000
+    localRoutes: ["/"]
+
+    image:
+      repository: ghcr.io/hazelchat/hazel-backend
+      tag: "1.0.1"
+      pullPolicy: IfNotPresent
+      pullSecrets: []
+
   electricProxy:
-    localRoutes: []
+    localRoutes: ["/"]
   landing:
-    localRoutes: []
+    localRoutes: ["/"]
   actors:
-    localRoutes: []
+    localRoutes: ["/"]
   # SMTP settings
   smtp:
     host: smtp.hazel.localhost
@@ -122,7 +157,6 @@ hazel:
     port: 443
     useSSL: true
     s3CustomDomain: ""
-    s3ProfileImageCustomDomain: ""
     defaultACL: ""
     addressingStyle: "auto"
     region: ""
@@ -132,3 +166,111 @@ hazel:
     name: hazel
     credentials: "hazel-db-credentials"
     options: {}
+  workos:
+    cookieDomain: "localhost"
+    redirectUri: "http://localhost:3003/auth/callback"
+    clientId:
+      secretName: workos-credentials
+      secretKey: clientId
+    apiKey:
+      secretName: workos-credentials
+      secretKey: apiKey
+    webhook:
+      secretName: workos-credentials
+      secretKey: webhook
+  integration:
+    encryptionKey:
+      secretName: integration-encryption-key
+      secretKey: key
+      version: 1
+
+electric:
+  enabled: true
+  name: electric
+  apiTokenSecretName: electric-api-token
+  apiTokenSecretKey: token
+  insecureApi: false
+  tcpSendTimeout: "600s"
+
+  image:
+    repository: electricsql/electric
+    tag: 1.4.13
+    pullPolicy: IfNotPresent
+  podAnnotations: {}
+  replicaCount: 1
+  extraEnvVars: {}
+  strategy:
+    type: Recreate
+
+  containerPorts:
+    http: 80
+
+  persistence:
+    ## @param electric.persistence.enabled Enable electric data persistence using PVC
+    ##
+    enabled: true
+    ## @param electric.persistence.volumeName Name to assign the volume
+    ##
+    volumeName: "data"
+    ## @param electric.persistence.existingClaim Name of an existing PVC to use
+    ##
+    existingClaim: ""
+    ## @param electric.persistence.mountPath The path the volume will be mounted at
+    ## Note: useful when using custom electric images
+    ##
+    mountPath: /var/lib/electric/persistent
+    ## @param electric.persistence.subPath The subdirectory of the volume to mount to
+    ## Useful in dev environments and one PV for multiple services
+    ##
+    subPath: ""
+    ## @param electric.persistence.storageClass PVC Storage Class for electric data volume
+    ## If defined, storageClassName: <storageClass>
+    ## If set to "-", storageClassName: "", which disables dynamic provisioning
+    ## If undefined (the default) or set to null, no storageClassName spec is
+    ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+    ##   GKE, AWS & OpenStack)
+    ##
+    storageClass: ""
+    ## @param electric.persistence.accessModes PVC Access Mode for electric volume
+    ##
+    accessModes:
+      - ReadWriteOnce
+    ## @param electric.persistence.size PVC Storage Request for electric volume
+    ##
+    size: 8Gi
+    ## @param electric.persistence.annotations Annotations for the PVC
+    ##
+    annotations: {}
+    ## @param electric.persistence.labels Labels for the PVC
+    ##
+    labels: {}
+    ## @param electric.persistence.selector Selector to match an existing Persistent Volume (this value is evaluated as a template)
+    ## selector:
+    ##   matchLabels:
+    ##     app: my-app
+    ##
+    selector: {}
+    ## @param electric.persistence.dataSource Custom PVC data source
+    ##
+    dataSource: {}
+
+  ## TODO: document
+  service:
+    annotations: {}
+    labels: {}
+      # "istio.io/use-waypoint": "supabase-waypoint"
+
+    type: ClusterIP
+    ports:
+      http: 80
+    nodePorts:
+      http: ""
+    clusterIP: ""
+    loadBalancerIP: ""
+    loadBalancerSourceRanges: []
+    externalTrafficPolicy: Cluster
+    extraPorts: []
+    sessionAffinity: None
+    sessionAffinityConfig: {}
+
+  extraArgs: {}

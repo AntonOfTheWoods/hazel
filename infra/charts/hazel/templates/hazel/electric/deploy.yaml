@@ -1,0 +1,82 @@
+{{- if .Values.electric.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "project.electric.fullname" . }}
+  labels:
+    {{- include "project.electric.labels" . | nindent 4 }}
+
+spec:
+  replicas: {{ .Values.electric.replicaCount }}
+  {{- if .Values.electric.strategy }}
+  strategy:
+{{ toYaml .Values.electric.strategy | indent 4 }}
+  {{- end }}
+
+  selector:
+    matchLabels:
+      {{- include "project.electric.matchLabels" . | nindent 6 }}
+
+  template:
+    metadata:
+    {{- if .Values.electric.podAnnotations }}
+      annotations:
+{{ toYaml .Values.electric.podAnnotations | indent 8 }}
+    {{- end }}
+      labels:
+        {{- include "project.electric.labels" . | nindent 8 }}
+        app.kubernetes.io/component: electric
+    spec:
+      initContainers:
+        {{- include "hazel.database.checkdbready" . | indent 8 }}
+
+      containers:
+      - name: electric
+        image: {{ include "electric.image" . }}
+        imagePullPolicy: {{ .Values.electric.image.pullPolicy }}
+
+        env:
+        {{- include "hazel.database.envvars" . | indent 8 }}
+
+        - name: ELECTRIC_PORT
+          value: {{ .Values.electric.containerPorts.http | quote }}
+        - name: ELECTRIC_STORAGE_DIR
+          value: {{ .Values.electric.persistence.mountPath }}
+
+        - name: ELECTRIC_TCP_SEND_TIMEOUT
+          value: {{ .Values.electric.tcpSendTimeout | default "600s" | quote }}
+
+        {{- if .Values.electric.insecureApi }}
+        - name: ELECTRIC_INSECURE
+          value: "true"
+        {{- else }}
+        - name: ELECTRIC_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.electric.apiTokenSecretName }}
+              key: {{ .Values.electric.apiTokenSecretKey }}
+        {{- end }}
+
+        {{- if .Values.electric.extraEnvVars }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.electric.extraEnvVars "context" $) | nindent 8 }}
+        {{- end }}
+
+        volumeMounts:
+        - name: {{ .Values.electric.persistence.volumeName }}
+          mountPath: {{ .Values.electric.persistence.mountPath }}
+          {{- if .Values.electric.persistence.subPath }}
+          subPath: {{ .Values.electric.persistence.subPath }}
+          {{- end }}
+
+      volumes:
+      - name: {{ .Values.electric.persistence.volumeName }}
+  {{- if and .Values.electric.persistence.enabled .Values.electric.persistence.existingClaim }}
+        persistentVolumeClaim:
+          claimName: {{ tpl .Values.electric.persistence.existingClaim $ }}
+  {{- else if not .Values.electric.persistence.enabled }}
+        emptyDir: {}
+  {{- else }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.electric.persistence.volumeName }}
+  {{- end }}
+{{- end }}

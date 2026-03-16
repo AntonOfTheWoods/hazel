@@ -16,6 +16,28 @@ hazel:
       lbIP: ""
     backups:
       lbIP: ""
+  backups:
+    image:
+      repository: minio/mc
+      tag: RELEASE.2025-08-13T08-35-41Z
+      pullPolicy: IfNotPresent
+
+    media:
+      enabled: false
+      strategy:
+        type: Recreate
+      destination:
+        bucketName: "hazel-media-backups"
+        host: backups.hazel.localhostz
+        port: 80
+        useSSL: false
+        accessKey:
+          secretName: s3-backups
+          secretKey: username
+        secretKey:
+          secretName: s3-backups
+          secretKey: password
+
 
   certManager:
     issuers: []
@@ -105,7 +127,7 @@ db:
       #   replication: false
       #   bypassrls: false
       #   passwordSecret:
-      #     name: notes-db-credentials
+      #     name: mya-db-credentials
 
 minio:
   enabled: false
@@ -179,9 +201,10 @@ minio:
       pathType: Prefix
 
 redis:
+  enabled: true
+  # FIXME: externalConfig is not actually used but by being present, it avoids a bug in chart versions 0.16.7-9
   externalConfig:
     enabled: true
-  enabled: true
   redisStandalone:
     name: redis  # apparently MUST be set or it will default to the release name
     tag: "v7.4.8"
