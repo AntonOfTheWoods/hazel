@@ -7,17 +7,16 @@ metadata:
 spec:
   clusterRef:
     name: garage
-
-  name: imported-key
+  name: s3-key
 
   # Import from existing secret
   importKey:
-    accessKeyId: username
-    secretAccessKey: password
+    accessKeyIdKey: username
+    secretAccessKeyKey: password
     secretRef:
       name: s3-storage
       # namespace: datest
 
   bucketPermissions:
-    - globalAlias: shared-bucket
+    - globalAlias: hazel-bucket
       read: true

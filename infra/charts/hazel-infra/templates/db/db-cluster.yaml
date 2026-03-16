@@ -7,22 +7,26 @@
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: {{ $cfg.cluster.name | default (printf "%s-%s" (include "project.name" $root) $name) }}
-  annotations:
-    {{- include "project.annotations" $root | nindent 4 }}
+  name: {{ $cfg.cluster.name | default (printf "%s-%s" (include "common.names.name" $root) $name) }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" $root.Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: db-cluster
+    hazel.cluster: {{ $name }}
+  {{- if or $cfg.deploymentAnnotations $root.Values.commonAnnotations }}
+  {{- $annotations := include "common.tplvalues.merge" (dict "values" (list $cfg.deploymentAnnotations $root.Values.commonAnnotations) "context" .) }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
     cnpg.io/skipEmptyWalArchiveCheck: "enabled"
-  labels:
-    {{- include "project.componentLabels" (dict "component" "db" "root" $root) | nindent 4 }}
-    transcrobes.cluster: {{ $name }}
+  {{- end }}
 
 spec:
   instances: {{ $cfg.cluster.instances | default 1 }}
   imageName: {{ $cfg.image.repository | default "ghcr.io/cloudnative-pg" }}:{{ $cfg.image.tag | default "18-standard-trixie" }}
   imagePullPolicy: {{ $cfg.image.pullPolicy | default "IfNotPresent" }}
-  {{- include "project.imagePullSecrets" $root | nindent 2 }}
+  {{/*
+  {{- include "hazel.imagePullSecrets" $cfg.image | nindent 2 }}
+  */}}
 
   superuserSecret:
-    name: {{ $cfg.cluster.superuser.credentials | default (printf "%s-%s-super-credentials" (include "project.name" $root) $name) }}
+    name: {{ $cfg.cluster.superuser.credentials | default (printf "%s-%s-super-credentials" (include "common.names.name" $root) $name) }}
   {{- if $cfg.cluster.postgresUID }}
   postgresUID: {{ $cfg.cluster.postgresUID }}
   {{- end }}
@@ -42,7 +46,7 @@ spec:
       database: {{ $cfg.cluster.bootstrap.initdb.dbName | default "transcrobes" }}
       owner: {{ $cfg.cluster.bootstrap.initdb.dbOwner | default "transcrobes" }}
       secret:
-        name: {{ $cfg.cluster.user.credentials | default (printf "%s-%s-db-credentials" (include "project.name" $root) $name) }}
+        name: {{ $cfg.cluster.user.credentials | default (printf "%s-%s-db-credentials" (include "common.names.name" $root) $name) }}
       {{- if $cfg.cluster.bootstrap.initdb.postInitApplicationSQL }}
       postInitApplicationSQL:
         {{- toYaml $cfg.cluster.bootstrap.initdb.postInitApplicationSQL | nindent 8 }}
@@ -50,9 +54,9 @@ spec:
 
   {{- else }}
     recovery:
-      source: {{ $cfg.cluster.bootstrap.recovery.source | default (printf "%s-%s-bootstrap-source" (include "project.name" $root) $name) }}
+      source: {{ $cfg.cluster.bootstrap.recovery.source | default (printf "%s-%s-bootstrap-source" (include "common.names.name" $root) $name) }}
   externalClusters:
-  - name: {{ $cfg.cluster.bootstrap.recovery.externalClusterName | default (printf "%s-%s-bootstrap-source" (include "project.name" $root) $name) }}
+  - name: {{ $cfg.cluster.bootstrap.recovery.externalClusterName | default (printf "%s-%s-bootstrap-source" (include "common.names.name" $root) $name) }}
     plugin:
       name: barman-cloud.cloudnative-pg.io
       parameters:
