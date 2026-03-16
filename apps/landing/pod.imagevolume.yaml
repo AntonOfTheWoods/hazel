@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: landing
+  labels:
+    app: landing
+spec:
+  restartPolicy: Never
+  containers:
+    - name: landing
+      image: caddy:2-alpine
+      workingDir: /workspace/apps/landing
+      command:
+        ["caddy", "file-server", "--root", "/workspace/apps/landing/dist", "--listen", ":3008"]
+      volumeMounts:
+        - name: code
+          mountPath: /workspace
+          readOnly: true
+      ports:
+        - containerPort: 3008
+  volumes:
+    - name: code
+      image:
+        reference: ghcr.io/your-org/hazel-landing-code:latest
+        pullPolicy: IfNotPresent

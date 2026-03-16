@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web
+  labels:
+    app: web
+spec:
+  restartPolicy: Never
+  containers:
+    - name: web
+      image: caddy:2-alpine
+      workingDir: /workspace/apps/web
+      command:
+        ["caddy", "file-server", "--root", "/workspace/apps/web/dist", "--listen", ":3000"]
+      volumeMounts:
+        - name: code
+          mountPath: /workspace
+          readOnly: true
+      ports:
+        - containerPort: 3000
+  volumes:
+    - name: code
+      image:
+        reference: ghcr.io/your-org/hazel-web-code:latest
+        pullPolicy: IfNotPresent

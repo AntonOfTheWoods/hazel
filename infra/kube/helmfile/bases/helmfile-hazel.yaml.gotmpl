@@ -11,8 +11,8 @@ releases:
   version: 0.1.0
   wait: true
   waitForJobs: true
-  needs:
-  - hazel/hazel-infra
+  # needs:
+  # - hazel/hazel-infra
 
   values:
   {{ if (eq .Environment.Name "dev") }}

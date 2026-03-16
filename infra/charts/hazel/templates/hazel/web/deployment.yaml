@@ -2,6 +2,7 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
+{{- if .Values.web.enabled }}
 apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
 metadata:
@@ -35,7 +36,11 @@ spec:
         app.kubernetes.io/component: hazel-web
         app.kubernetes.io/part-of: hazel
     spec:
+
+      {{/*
       {{- include "hazel.imagePullSecrets" . | nindent 6 }}
+      */}}
+
       serviceAccountName: {{ template "hazel.serviceAccountName" . }}
       automountServiceAccountToken: {{ .Values.web.automountServiceAccountToken }}
       {{- if .Values.web.hostAliases }}
@@ -74,19 +79,16 @@ spec:
         {{- if .Values.defaultInitContainers.waitForDB.enabled }}
         {{- include "hazel.initContainers.waitForDB" . | nindent 8 }}
         {{- end }}
-        {{- if .Values.defaultInitContainers.waitForRedis.enabled }}
-        {{- include "hazel.initContainers.waitForRedis" . | nindent 8 }}
-        {{- end }}
-        {{- if and .Values.init.enabled .Values.web.waitForExamples.enabled .Values.loadExamples }}
-        {{- include "hazel.initContainers.waitForExamples" . | nindent 8 }}
+        {{- if .Values.defaultInitContainers.waitForKV.enabled }}
+        {{- include "hazel.initContainers.waitForKV" . | nindent 8 }}
         {{- end }}
         {{- if .Values.web.initContainers }}
         {{- include "common.tplvalues.render" (dict "value" .Values.web.initContainers "context" $) | nindent 8 }}
         {{- end }}
       containers:
         - name: hazel-web
-          image: {{ template "hazel.image" . }}
-          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          image: {{ template "hazel.web.image" . }}
+          imagePullPolicy: {{ .Values.web.image.pullPolicy | quote }}
           {{- if .Values.web.containerSecurityContext.enabled }}
           securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.web.containerSecurityContext "context" $) | nindent 12 }}
           {{- end }}
@@ -103,7 +105,7 @@ spec:
           env:
             {{- include "hazel.configure.common" . | nindent 12 }}
             {{- include "hazel.configure.database" . | nindent 12 }}
-            {{- include "hazel.configure.redis" . | nindent 12 }}
+            {{- include "hazel.configure.kv" . | nindent 12 }}
             - name: hazel_ROLE
               value: "webserver"
             - name: hazel_WEBSERVER_PORT_NUMBER
@@ -128,9 +130,6 @@ spec:
           ports:
             - name: http
               containerPort: {{ .Values.web.containerPorts.http }}
-            {{- if .Values.flower.extraContainerPorts }}
-            {{- include "common.tplvalues.render" (dict "value" .Values.flower.extraContainerPorts "context" $) | nindent 12 }}
-            {{- end }}
           {{- if not .Values.diagnosticMode.enabled }}
           {{- if .Values.web.customLivenessProbe }}
           livenessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.web.customLivenessProbe "context" $) | nindent 12 }}
@@ -205,3 +204,4 @@ spec:
         {{- if .Values.web.extraVolumes }}
         {{- include "common.tplvalues.render" (dict "value" .Values.web.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
+{{- end }}

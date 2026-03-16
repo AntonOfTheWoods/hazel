@@ -1,0 +1,28 @@
+# Start by ignoring everything
+*
+
+# Allow only files needed to compute monorepo graph/install
+!package.json
+!bun.lock
+!bunfig.toml
+!turbo.json
+!.npmrc
+
+# Allow only backend + internal workspaces it can depend on
+!apps/backend/**
+!packages/**
+!libs/**
+
+# If Dockerfile is outside allowed paths, explicitly include it
+!Dockerfile
+!apps/backend/Dockerfile
+
+# Re-ignore heavy/generated content inside allowed paths
+**/node_modules
+**/.turbo
+**/dist
+**/build
+**/coverage
+**/*.log
+**/.env
+**/.env.*

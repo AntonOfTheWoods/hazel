@@ -373,6 +373,6 @@ redis:
   externalConfig:
     enabled: true
   redisStandalone:
-    name: kv  # apparently MUST be set or it will default to the release name
+    name: kv-rw  # apparently MUST be set or it will default to the release name
     tag: "v7.4.8"
     # tag: "v8.4.2"

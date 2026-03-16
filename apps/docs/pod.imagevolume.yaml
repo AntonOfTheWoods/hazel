@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: docs
+  labels:
+    app: docs
+spec:
+  restartPolicy: Never
+  containers:
+    - name: docs
+      image: caddy:2-alpine
+      workingDir: /workspace/apps/docs
+      command:
+        ["caddy", "file-server", "--root", "/workspace/apps/docs/dist", "--listen", ":3012"]
+      volumeMounts:
+        - name: code
+          mountPath: /workspace
+          readOnly: true
+      ports:
+        - containerPort: 3012
+  volumes:
+    - name: code
+      image:
+        reference: ghcr.io/your-org/hazel-docs-code:latest
+        pullPolicy: IfNotPresent

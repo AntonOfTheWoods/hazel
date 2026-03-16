@@ -2,7 +2,7 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if .Values.web.networkPolicy.enabled }}
+{{- if and .Values.web.enabled .Values.web.networkPolicy.enabled }}
 kind: NetworkPolicy
 apiVersion: {{ include "common.capabilities.networkPolicy.apiVersion" . }}
 metadata:

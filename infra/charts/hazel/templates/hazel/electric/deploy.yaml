@@ -2,9 +2,15 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "project.electric.fullname" . }}
-  labels:
-    {{- include "project.electric.labels" . | nindent 4 }}
+  name: {{ template "electric.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: electric
+    app.kubernetes.io/part-of: hazel
+  {{- if or .Values.electric.deploymentAnnotations .Values.commonAnnotations }}
+  {{- $annotations := include "common.tplvalues.merge" (dict "values" (list .Values.electric.deploymentAnnotations .Values.commonAnnotations) "context" .) }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
+  {{- end }}
 
 spec:
   replicas: {{ .Values.electric.replicaCount }}
@@ -13,22 +19,25 @@ spec:
 {{ toYaml .Values.electric.strategy | indent 4 }}
   {{- end }}
 
+  {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list .Values.electric.podLabels .Values.commonLabels) "context" .) }}
   selector:
-    matchLabels:
-      {{- include "project.electric.matchLabels" . | nindent 6 }}
-
+    matchLabels: {{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+      app.kubernetes.io/component: electric
+      app.kubernetes.io/part-of: hazel
   template:
     metadata:
-    {{- if .Values.electric.podAnnotations }}
-      annotations:
-{{ toYaml .Values.electric.podAnnotations | indent 8 }}
-    {{- end }}
-      labels:
-        {{- include "project.electric.labels" . | nindent 8 }}
+      {{- if .Values.electric.podAnnotations }}
+      annotations: {{- include "common.tplvalues.render" (dict "value" .Values.electric.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+      labels: {{- include "common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
         app.kubernetes.io/component: electric
+        app.kubernetes.io/part-of: hazel
+
     spec:
       initContainers:
-        {{- include "hazel.database.checkdbready" . | indent 8 }}
+        {{- if .Values.defaultInitContainers.waitForDB.enabled }}
+        {{- include "hazel.initContainers.waitForDB" . | nindent 8 }}
+        {{- end }}
 
       containers:
       - name: electric
@@ -36,7 +45,7 @@ spec:
         imagePullPolicy: {{ .Values.electric.image.pullPolicy }}
 
         env:
-        {{- include "hazel.database.envvars" . | indent 8 }}
+        {{- include "hazel.configure.database" . | indent 8 }}
 
         - name: ELECTRIC_PORT
           value: {{ .Values.electric.containerPorts.http | quote }}

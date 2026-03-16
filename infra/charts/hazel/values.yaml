@@ -1,10 +1,66 @@
-
 global:
-  instanceId: "hazel-instance"
-  imagePullSecrets: []
   namespace: hazel
   hazelVersion: "1.0.1"
+  instanceId: "hazel-instance"
   redirectHttp: true
+  imageRegistry: ""
+  ## e.g:
+  ## imagePullSecrets:
+  ##   - myRegistryKeySecretName
+  ##
+  imagePullSecrets: []
+  storageClass: ""
+  ## Compatibility adaptations for Kubernetes platforms
+  ##
+  compatibility:
+    ## Compatibility adaptations for Openshift
+    ##
+    openshift:
+      ## @param global.compatibility.openshift.adaptSecurityContext Adapt the securityContext sections of the deployment to make them compatible with Openshift restricted-v2 SCC: remove runAsUser, runAsGroup and fsGroup and let the platform use their allowed default IDs. Possible values: auto (apply if the detected running cluster is Openshift), force (perform the adaptation always), disabled (do not perform adaptation)
+      ##
+      adaptSecurityContext: auto
+
+## @section Common parameters
+##
+
+## @param kubeVersion Override Kubernetes version
+##
+kubeVersion: ""
+## @param apiVersions Override Kubernetes API versions reported by .Capabilities
+##
+apiVersions: []
+## @param nameOverride String to partially override common.names.name
+##
+nameOverride: ""
+## @param fullnameOverride String to fully override common.names.fullname
+##
+fullnameOverride: ""
+## @param namespaceOverride String to fully override common.names.namespace
+##
+namespaceOverride: ""
+## @param commonLabels Labels to add to all deployed objects
+##
+commonLabels:
+  app.kubernetes.io/part-of: hazel
+  # app.kubernetes.io/managed-by: Helm
+
+## @param commonAnnotations Annotations to add to all deployed objects
+##
+commonAnnotations: {}
+## @param clusterDomain Kubernetes cluster domain name
+##
+clusterDomain: cluster.local
+## @param extraDeploy Array of extra objects to deploy with the release
+##
+extraDeploy: []
+## @param usePasswordFiles Mount credentials as files instead of using an environment variable
+##
+diagnosticMode:
+  enabled: false
+  command:
+    - sleep
+  args:
+    - infinity
 
 psqlImage:
   # should already be in the cluster from the db cluster setup, so no need to pull
@@ -14,19 +70,17 @@ psqlImage:
   tag: 18-alpine
   pullPolicy: IfNotPresent
 
+kvImage:
+  # should already be in the cluster from the kv cluster setup, so no need to pull
+  # quay.io/opstree/redis:7.4.8
+  registry: docker.io
+  repository: redis
+  tag: 8-alpine
+  pullPolicy: IfNotPresent
+
 project:
   local:
     enableNodePorts: false
-
-# Common labels and annotations
-commonLabels:
-  app.kubernetes.io/part-of: hazel
-  # app.kubernetes.io/managed-by: Helm
-  # Additional common labels can be added here
-
-commonAnnotations: {}
-  # App version annotation will be automatically added
-  # Additional annotations can be added here
 
 hazel:
   # Dev settings
@@ -41,7 +95,7 @@ hazel:
 ## hazel Webserver
 ##
 web:
-  enabled: true
+  enabled: false
   localRoutes:
     - name: root
       path: /
@@ -497,58 +551,6 @@ web:
     ingressNSMatchLabels: {}
     ingressNSPodMatchLabels: {}
 
-  ## 'wait-for-examples' init container parameters
-  ##
-  waitForExamples:
-    ## @param web.waitForExamples.enabled Enable init container that waits for the load_examples command to finish before starting the webserver
-    ##
-    enabled: false
-    ## Init container's resource requests and limits
-    ## ref: http://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
-    ## @param web.waitForExamples.resourcesPreset Set init container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if waitForExamples.resources is set (waitForExamples.resources is recommended for production).
-    ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
-    ##
-    resourcesPreset: "nano"
-    ## @param web.waitForExamples.resources Set init container requests and limits for different resources like CPU or memory (essential for production workloads)
-    ## Example:
-    ## resources:
-    ##   requests:
-    ##     cpu: 2
-    ##     memory: 512Mi
-    ##   limits:
-    ##     cpu: 3
-    ##     memory: 1024Mi
-    ##
-    resources: {}
-    ## InitContainer Security Context
-    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
-    ## @param web.waitForExamples.containerSecurityContext.enabled Enabled wait-for-redis initcontainer's Security Context
-    ## @param web.waitForExamples.containerSecurityContext.seLinuxOptions [object,nullable] Set SELinux options in wait-for-redis initcontainer
-    ## @param web.waitForExamples.containerSecurityContext.runAsUser Set runAsUser in wait-for-redis initcontainer's Security Context
-    ## @param web.waitForExamples.containerSecurityContext.runAsGroup Set runAsGroup in wait-for-redis initcontainer's Security Context
-    ## @param web.waitForExamples.containerSecurityContext.runAsNonRoot Set runAsNonRoot in wait-for-redis initcontainer's Security Context
-    ## @param web.waitForExamples.containerSecurityContext.readOnlyRootFilesystem Set readOnlyRootFilesystem in wait-for-redis initcontainer's Security Context
-    ## @param web.waitForExamples.containerSecurityContext.privileged Set privileged in wait-for-redis initcontainer's Security Context
-    ## @param web.waitForExamples.containerSecurityContext.allowPrivilegeEscalation Set allowPrivilegeEscalation in wait-for-redis initcontainer's Security Context
-    ## @param web.waitForExamples.containerSecurityContext.capabilities.drop List of capabilities to be dropped in wait-for-redis initcontainer
-    ## @param web.waitForExamples.containerSecurityContext.seccompProfile.type Set seccomp profile in wait-for-redis initcontainer
-    ##
-    containerSecurityContext:
-      enabled: true
-      seLinuxOptions: {}
-      runAsUser: 1001
-      runAsGroup: 1001
-      runAsNonRoot: true
-      readOnlyRootFilesystem: false
-      privileged: false
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop: ["ALL"]
-      seccompProfile:
-        type: "RuntimeDefault"
-
-
-
 # web:
 #   enabled: true
 #   localRoutes:
@@ -681,8 +683,9 @@ backups:
 # Ingress, Certs
 traefik:
   enabled: true
-  publicStoragePaths:
-    - /public/
+
+publicStoragePaths:
+  - /public/
 
 # dbs, search and data stores
 cache:
@@ -716,6 +719,12 @@ db:
   port: 5432
   name: app
   credentials: "hazel-db-credentials"
+  options: {}
+kv:
+  host: kv-rw
+  port: 6379
+  name: app
+  credentials: "kv-db-credentials"
   options: {}
 workos:
   cookieDomain: "localhost"
@@ -825,3 +834,127 @@ electric:
     sessionAffinityConfig: {}
 
   extraArgs: {}
+
+## @section Default Init Container Parameters
+##
+defaultInitContainers:
+  ## 'wait-for-db' init container parameters
+  ##
+  waitForDB:
+    ## @param defaultInitContainers.waitForDB.enabled Enable init container that waits for the Database to be available
+    ##
+    enabled: true
+    ## Init container's resource requests and limits
+    ## ref: http://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+    ## @param defaultInitContainers.waitForDB.resourcesPreset Set init container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if waitForDB.resources is set (waitForDB.resources is recommended for production).
+    ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
+    ##
+    resourcesPreset: "none"
+    ## @param defaultInitContainers.waitForDB.resources Set init container requests and limits for different resources like CPU or memory (essential for production workloads)
+    ## Example:
+    ## resources:
+    ##   requests:
+    ##     cpu: 2
+    ##     memory: 512Mi
+    ##   limits:
+    ##     cpu: 3
+    ##     memory: 1024Mi
+    ##
+    resources: {}
+    ## InitContainer Security Context
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+    ## @param defaultInitContainers.waitForDB.containerSecurityContext.enabled Enabled wait-for-db initcontainer's Security Context
+    ## @param defaultInitContainers.waitForDB.containerSecurityContext.seLinuxOptions [object,nullable] Set SELinux options in wait-for-db initcontainer
+    ## @param defaultInitContainers.waitForDB.containerSecurityContext.runAsUser Set runAsUser in wait-for-db initcontainer's Security Context
+    ## @param defaultInitContainers.waitForDB.containerSecurityContext.runAsGroup Set runAsGroup in wait-for-db initcontainer's Security Context
+    ## @param defaultInitContainers.waitForDB.containerSecurityContext.runAsNonRoot Set runAsNonRoot in wait-for-db initcontainer's Security Context
+    ## @param defaultInitContainers.waitForDB.containerSecurityContext.readOnlyRootFilesystem Set readOnlyRootFilesystem in wait-for-db initcontainer's Security Context
+    ## @param defaultInitContainers.waitForDB.containerSecurityContext.privileged Set privileged in wait-for-db initcontainer's Security Context
+    ## @param defaultInitContainers.waitForDB.containerSecurityContext.allowPrivilegeEscalation Set allowPrivilegeEscalation in wait-for-db initcontainer's Security Context
+    ## @param defaultInitContainers.waitForDB.containerSecurityContext.capabilities.drop List of capabilities to be dropped in wait-for-db initcontainer
+    ## @param defaultInitContainers.waitForDB.containerSecurityContext.seccompProfile.type Set seccomp profile in wait-for-db initcontainer
+    ##
+    containerSecurityContext:
+      enabled: true
+      seLinuxOptions: {}
+      runAsUser: 1001
+      runAsGroup: 1001
+      runAsNonRoot: true
+      readOnlyRootFilesystem: false
+      privileged: false
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      seccompProfile:
+        type: "RuntimeDefault"
+
+  ## 'wait-for-kv' init container parameters
+  ##
+  waitForKV:
+    ## @param defaultInitContainers.waitForRedis.enabled Enable init container that waits for Redis to be available
+    ##
+    enabled: true
+    ## Init container's resource requests and limits
+    ## ref: http://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+    ## @param defaultInitContainers.waitForRedis.resourcesPreset Set init container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if waitForRedis.resources is set (waitForRedis.resources is recommended for production).
+    ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
+    ##
+    resourcesPreset: "none"
+    ## @param defaultInitContainers.waitForRedis.resources Set init container requests and limits for different resources like CPU or memory (essential for production workloads)
+    ## Example:
+    ## resources:
+    ##   requests:
+    ##     cpu: 2
+    ##     memory: 512Mi
+    ##   limits:
+    ##     cpu: 3
+    ##     memory: 1024Mi
+    ##
+    resources: {}
+    ## InitContainer Security Context
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+    ## @param defaultInitContainers.waitForRedis.containerSecurityContext.enabled Enabled wait-for-redis initcontainer's Security Context
+    ## @param defaultInitContainers.waitForRedis.containerSecurityContext.seLinuxOptions [object,nullable] Set SELinux options in wait-for-redis initcontainer
+    ## @param defaultInitContainers.waitForRedis.containerSecurityContext.runAsUser Set runAsUser in wait-for-redis initcontainer's Security Context
+    ## @param defaultInitContainers.waitForRedis.containerSecurityContext.runAsGroup Set runAsGroup in wait-for-redis initcontainer's Security Context
+    ## @param defaultInitContainers.waitForRedis.containerSecurityContext.runAsNonRoot Set runAsNonRoot in wait-for-redis initcontainer's Security Context
+    ## @param defaultInitContainers.waitForRedis.containerSecurityContext.readOnlyRootFilesystem Set readOnlyRootFilesystem in wait-for-redis initcontainer's Security Context
+    ## @param defaultInitContainers.waitForRedis.containerSecurityContext.privileged Set privileged in wait-for-redis initcontainer's Security Context
+    ## @param defaultInitContainers.waitForRedis.containerSecurityContext.allowPrivilegeEscalation Set allowPrivilegeEscalation in wait-for-redis initcontainer's Security Context
+    ## @param defaultInitContainers.waitForRedis.containerSecurityContext.capabilities.drop List of capabilities to be dropped in wait-for-redis initcontainer
+    ## @param defaultInitContainers.waitForRedis.containerSecurityContext.seccompProfile.type Set seccomp profile in wait-for-redis initcontainer
+    ##
+    containerSecurityContext:
+      enabled: true
+      seLinuxOptions: {}
+      runAsUser: 1001
+      runAsGroup: 1001
+      runAsNonRoot: true
+      readOnlyRootFilesystem: false
+      privileged: false
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      seccompProfile:
+        type: "RuntimeDefault"
+
+
+## @section Other Parameters
+##
+
+## ServiceAccount configuration
+##
+serviceAccount:
+  ## @param serviceAccount.create Specifies whether a ServiceAccount should be created
+  ##
+  create: true
+  ## @param serviceAccount.name The name of the ServiceAccount to use.
+  ## If not set and create is true, a name is generated using the common.names.fullname template
+  ##
+  name: ""
+  ## @param serviceAccount.annotations Additional Service Account annotations (evaluated as a template)
+  ##
+  annotations: {}
+  ## @param serviceAccount.automountServiceAccountToken Automount service account token for the server service account
+  ##
+  automountServiceAccountToken: true

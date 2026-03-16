@@ -15,3 +15,7 @@ sources:
 maintainers:
   - name: Anton MELSER
     url: https://github.com/AntonOfTheWoods
+dependencies:
+  - name: common
+    repository: oci://registry-1.docker.io/bitnamicharts
+    version: 2.36.0

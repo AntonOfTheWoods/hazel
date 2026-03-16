@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ template "project.electric.fullname" . }}
+  name: {{ template "electric.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
-  labels:
-    {{- include "project.electric.labels" . | nindent 4 }}
-
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: electric
+    app.kubernetes.io/part-of: hazel
   {{- if or .Values.electric.service.annotations .Values.commonAnnotations }}
   {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .Values.electric.service.annotations .Values.commonAnnotations ) "context" . ) }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
@@ -45,5 +45,6 @@ spec:
     {{- include "common.tplvalues.render" (dict "value" .Values.electric.service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
   {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.electric.podLabels .Values.commonLabels ) "context" . ) }}
-  selector:
-    {{- include "project.electric.matchLabels" . | nindent 4 }}
+  selector: {{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: electric
+    app.kubernetes.io/part-of: hazel
