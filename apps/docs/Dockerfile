@@ -7,9 +7,6 @@ COPY . .
 RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
 RUN bun run --cwd apps/docs build
 
-RUN mkdir -p /artifact/workspace
-RUN cp -R /workspace/. /artifact/workspace/
-
 FROM scratch
 WORKDIR /workspace
-COPY --from=builder /artifact/workspace/ /workspace/
+COPY --from=builder /workspace/apps/docs/.output/public /workspace/apps/docs/.output/public

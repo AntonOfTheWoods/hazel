@@ -11,7 +11,7 @@ spec:
       image: caddy:2-alpine
       workingDir: /workspace/apps/docs
       command:
-        ["caddy", "file-server", "--root", "/workspace/apps/docs/dist", "--listen", ":3012"]
+        ["caddy", "file-server", "--root", "/workspace/apps/docs/.output/public", "--listen", ":3012"]
       volumeMounts:
         - name: code
           mountPath: /workspace

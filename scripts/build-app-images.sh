@@ -18,6 +18,7 @@ readonly APPS=(
 
 BASE_REPO="ghcr.io/hazelchat/hazel/"
 TAG=""
+BUILDER_TAG=""
 PUSH=false
 JOBS=""
 USE_BUILDX=false
@@ -29,7 +30,7 @@ usage() {
 Build app code images for all non-desktop apps.
 
 Usage:
-	$(basename "$0") [--base <image-base>] [--tag <tag>] [--push]
+	$(basename "$0") [--base <image-base>] [--tag <tag>] [--builder-tag <tag-or-digest>] [--push]
 									 [--jobs <n>] [--buildx]
 									 [--cache-dir <path>] [--cache-ref <registry-ref>]
 
@@ -38,6 +39,8 @@ Options:
                        Default: ghcr.io/hazelchat/hazel/
   --tag <tag>          Image tag.
                        Default: git describe --tags
+	--builder-tag <ref>  Value for Docker build arg BUN_BUILDER_TAG.
+									 Supports digest-pinned forms (e.g. 1.3-alpine@sha256:...).
   --push               Push images after successful build.
 	--jobs <n>           Number of parallel builds.
 											 Default: half of host CPU cores (minimum 1)
@@ -52,6 +55,7 @@ Image naming:
 
 Example:
 	$(basename "$0")
+	$(basename "$0") --builder-tag 1.3-alpine@sha256:deadbeef...
 	$(basename "$0") --jobs 4 --buildx --cache-dir .cache/buildx
 	$(basename "$0") --base ghcr.io/acme/hazel/ --tag v1.2.3 --push
 EOF
@@ -73,6 +77,14 @@ while [[ $# -gt 0 ]]; do
 				exit 1
 			}
 			TAG="$2"
+			shift 2
+			;;
+		--builder-tag)
+			[[ $# -ge 2 ]] || {
+				echo "Error: --builder-tag requires a value" >&2
+				exit 1
+			}
+			BUILDER_TAG="$2"
 			shift 2
 			;;
 		--push)
@@ -195,6 +207,9 @@ trap cleanup_background_jobs EXIT
 echo "Repo root: ${REPO_ROOT}"
 echo "Base repo: ${BASE_REPO}"
 echo "Tag: ${TAG}"
+if [[ -n "${BUILDER_TAG}" ]]; then
+	echo "Builder tag: ${BUILDER_TAG}"
+fi
 echo "Jobs: ${JOBS}"
 echo "Buildx: ${USE_BUILDX}"
 
@@ -224,6 +239,10 @@ build_one() {
 	if [[ "${USE_BUILDX}" == true ]]; then
 		cmd=(docker buildx build -f "${dockerfile}" -t "${image}")
 
+		if [[ -n "${BUILDER_TAG}" ]]; then
+			cmd+=(--build-arg "BUN_BUILDER_TAG=${BUILDER_TAG}")
+		fi
+
 		if [[ -n "${CACHE_DIR}" ]]; then
 			cmd+=(--cache-from "type=local,src=${CACHE_DIR}")
 			cmd+=(--cache-to "type=local,dest=${CACHE_DIR},mode=max")
@@ -243,10 +262,12 @@ build_one() {
 		cmd+=("${REPO_ROOT}")
 		"${cmd[@]}"
 	else
-		docker build \
-			-f "${dockerfile}" \
-			-t "${image}" \
-			"${REPO_ROOT}"
+		cmd=(docker build -f "${dockerfile}" -t "${image}")
+		if [[ -n "${BUILDER_TAG}" ]]; then
+			cmd+=(--build-arg "BUN_BUILDER_TAG=${BUILDER_TAG}")
+		fi
+		cmd+=("${REPO_ROOT}")
+		"${cmd[@]}"
 
 		if [[ "${PUSH}" == true ]]; then
 			echo "==> Pushing ${image}"

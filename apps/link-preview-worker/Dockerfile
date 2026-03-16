@@ -4,12 +4,13 @@ FROM oven/bun:${BUN_BUILDER_TAG} AS builder
 WORKDIR /workspace
 
 COPY . .
-RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile --filter @hazel/link-preview-worker
 # RUN bun run --cwd apps/link-preview-worker test
-
-RUN mkdir -p /artifact/workspace
-RUN cp -R /workspace/. /artifact/workspace/
 
 FROM scratch
 WORKDIR /workspace
-COPY --from=builder /artifact/workspace/ /workspace/
+COPY --from=builder /workspace/package.json /workspace/package.json
+COPY --from=builder /workspace/bun.lock /workspace/bun.lock
+COPY --from=builder /workspace/bunfig.toml /workspace/bunfig.toml
+COPY --from=builder /workspace/node_modules /workspace/node_modules
+COPY --from=builder /workspace/apps/link-preview-worker /workspace/apps/link-preview-worker
