@@ -8,14 +8,14 @@
 !turbo.json
 !.npmrc
 
-# Allow only backend + internal workspaces it can depend on
-!apps/backend/**
+# Allow app code + internal workspaces it can depend on
+!apps/**
 !packages/**
 !libs/**
+!bots/**
 
 # If Dockerfile is outside allowed paths, explicitly include it
 !Dockerfile
-!apps/backend/Dockerfile
 
 # Re-ignore heavy/generated content inside allowed paths
 **/node_modules
