@@ -1,0 +1,27 @@
+apiVersion: garage.rajsingh.info/v1alpha1
+kind: GarageBucket
+metadata:
+  labels:
+    app.kubernetes.io/name: garage-operator
+    # app.kubernetes.io/managed-by: kustomize
+  name: hazel-bucket
+  # namespace: garage-operator-system
+spec:
+  clusterRef:
+    name: garage
+
+  # Bucket quotas
+  quotas:
+    maxSize: 1Gi
+    maxObjects: 10000
+
+  # Key permissions
+  keyPermissions:
+    - keyRef: s3-key
+      read: true
+      write: true
+
+  # Note: CORS and Lifecycle rules are NOT supported via the Garage Admin API.
+  # Configure these using the S3 API directly:
+  # - CORS: Use PutBucketCors S3 API
+  # - Lifecycle: Use PutBucketLifecycleConfiguration S3 API

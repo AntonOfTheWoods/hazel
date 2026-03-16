@@ -1,65 +1,71 @@
-{{/*
-Expand the name of the chart.
-*/}}
-{{- define "hazelinfra.name" -}}
-{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
-{{- end }}
 
 {{/*
-Common annotations that match Kustomize commonAnnotations
+Return the proper Image Registry Secret Names
 */}}
-{{- define "hazelinfra.annotations" -}}
-app.kubernetes.io/version: {{ .Values.global.hazelVersion | quote }}
-{{- with .Values.commonAnnotations }}
-{{- toYaml . | nindent 0 }}
-{{- end }}
-{{- end }}
+{{- define "hazel.imagePullSecrets" -}}
+{{- include "common.images.renderPullSecrets" (dict "images" (list .Values.global.image) "context" $) -}}
+{{- end -}}
 
 {{/*
-Create chart name and version as used by the chart label.
+Create a default fully qualified postgresql name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
-{{- define "hazelinfra.chart" -}}
-{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
-{{- end }}
+{{- define "hazel.postgresql.fullname" -}}
+{{- include "common.names.dependency.fullname" (dict "chartName" "postgresql" "chartValues" .Values.postgresql "context" $) -}}
+{{- end -}}
 
 {{/*
-Common labels
+Create a default fully qualified redis name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
-{{- define "hazelinfra.labels" -}}
-helm.sh/chart: {{ include "hazelinfra.chart" . }}
-app.kubernetes.io/name: {{ include "hazelinfra.name" . }}
-app.kubernetes.io/instance: hazelinfra-{{ .Values.global.instanceId }}
-app.kubernetes.io/version: {{ .Values.global.hazelVersion | quote }}
-app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/part-of: hazelinfra
-{{- with .Values.commonLabels }}
-{{- toYaml . | nindent 0 }}
-{{- end }}
-{{- end }}
+{{- define "hazel.redis.fullname" -}}
+{{- include "common.names.dependency.fullname" (dict "chartName" "redis" "chartValues" .Values.redis "context" $) -}}
+{{- end -}}
 
 {{/*
-Selector labels
+Create the name of the service account to use
 */}}
-{{- define "hazelinfra.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "hazelinfra.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
-{{- end }}
+{{- define "hazel.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create -}}
+    {{ default (include "common.names.fullname" .) .Values.serviceAccount.name }}
+{{- else -}}
+    {{ default "default" .Values.serviceAccount.name }}
+{{- end -}}
+{{- end -}}
 
 {{/*
-Component-specific labels
+Get the Redis&reg; credentials secret.
 */}}
-{{- define "hazelinfra.componentLabels" -}}
-{{- $component := .component }}
-{{- include "hazelinfra.labels" .root | nindent 0 }}
-app.kubernetes.io/component: {{ $component }}
-{{- end }}
+{{- define "hazel.redis.secretName" -}}
+{{- if .Values.redis.enabled -}}
+    {{- $name := default "redis" .Values.redis.nameOverride -}}
+    {{- default (printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-") (tpl .Values.redis.auth.existingSecret $) -}}
+{{- else }}
+    {{- default (printf "%s-externalredis" .Release.Name) (tpl .Values.externalRedis.existingSecret $) -}}
+{{- end -}}
+{{- end -}}
 
 {{/*
-Component-specific selector labels
+Get the Postgresql credentials secret.
 */}}
-{{- define "hazelinfra.componentSelectorLabels" -}}
-{{- $component := .component }}
-app.kubernetes.io/name: {{ include "hazelinfra.name" .root }}
-app.kubernetes.io/instance: hazelinfra-{{ .root.Values.global.instanceId }}
-app.kubernetes.io/component: {{ $component }}
-{{- end }}
+{{- define "hazel.postgresql.secretName" -}}
+{{- if .Values.postgresql.enabled }}
+    {{- tpl (coalesce (((.Values.global).postgresql).auth).existingSecret .Values.postgresql.auth.existingSecret (include "hazel.postgresql.fullname" .)) $ -}}
+{{- else -}}
+    {{- default (printf "%s-externaldb" .Release.Name) (tpl .Values.externalDatabase.existingSecret $) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get the secret name
+*/}}
+{{- define "hazel.secretName" -}}
+{{- default (include "common.names.fullname" .) (tpl .Values.auth.existingSecret .) -}}
+{{- end -}}
+
+{{/*
+Get the configmap name
+*/}}
+{{- define "hazel.configMapName" -}}
+{{- default (printf "%s-configuration" (include "common.names.fullname" .)) (tpl .Values.existingConfigmap .) -}}
+{{- end -}}

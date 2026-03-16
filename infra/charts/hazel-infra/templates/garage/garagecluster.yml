@@ -1,0 +1,62 @@
+apiVersion: garage.rajsingh.info/v1alpha1
+kind: GarageCluster
+metadata:
+  labels:
+    app.kubernetes.io/name: garage-operator
+    # app.kubernetes.io/managed-by: kustomize
+  name: garage
+  # namespace: garage-operator-system
+spec:
+  replicas: 1
+  image: dxflrs/garage:v2.2.0
+  # Override repo only, keeps default tag for auto-upgrades:
+  # imageRepository: my-mirror/garage
+  replication:
+    factor: 1
+    consistencyMode: consistent
+    # zoneRedundancy: "Maximum"  # Optional: "Maximum" or "AtLeast(n)" where n <= factor
+
+  storage:
+    metadata:
+      size: 1Gi
+    data:
+      size: 10Gi
+
+  network:
+    rpcBindPort: 3901
+    service:
+      type: ClusterIP
+
+  s3Api:
+    bindPort: 3900
+    region: garage
+
+  # Website hosting - enabled by default with rootDomain ".<name>.<namespace>.svc"
+  # Set webApi.disabled: true to turn off
+  # Bucket websites accessible at <bucket>.<rootDomain>:3902
+  webApi:
+    disabled: false
+    # rootDomain: ".web.garage.example.com"
+
+  # K2V key-value API - omit to disable
+  # k2vApi:
+  #   bindPort: 3904
+
+  admin:
+    enabled: true
+    bindPort: 3903
+    # adminTokenSecret
+    adminTokenSecretRef:
+      name: s3-admin
+      key: admin-token
+
+  database:
+    engine: lmdb
+
+  # resources:
+  #   requests:
+  #     cpu: 100m
+  #     memory: 256Mi
+  #   limits:
+  #     cpu: 1000m
+  #     memory: 1Gi

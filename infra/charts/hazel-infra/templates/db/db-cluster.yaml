@@ -1,68 +1,118 @@
-{{- if .Values.db.cluster.enabled }}
+{{- $root := . -}}
+{{- $clusters := $root.Values.dbClusters -}}
+{{- if $clusters }}
+{{- range $name, $cfg := $clusters }}
+{{- if $cfg.enabled }}
+---
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: {{ .Values.db.cluster.name | default "db-cluster" }}
+  name: {{ $cfg.cluster.name | default (printf "%s-%s" (include "project.name" $root) $name) }}
   annotations:
-    {{- include "hazelinfra.annotations" . | nindent 4 }}
-    # required for seamless bootstrap: https://github.com/cloudnative-pg/cloudnative-pg/issues/5778#issuecomment-2783417464
+    {{- include "project.annotations" $root | nindent 4 }}
     cnpg.io/skipEmptyWalArchiveCheck: "enabled"
   labels:
-    {{- include "hazelinfra.componentLabels" (dict "component" "db" "root" .) | nindent 4 }}
+    {{- include "project.componentLabels" (dict "component" "db" "root" $root) | nindent 4 }}
+    transcrobes.cluster: {{ $name }}
 
 spec:
-  instances: {{ .Values.db.cluster.instances | default 1 }}
-  imageName: {{ .Values.db.cluster.image.repository | default "ghcr.io/cloudnative-pg" }}:{{ .Values.db.cluster.image.tag | default "18-standard-trixie" }}
-  imagePullPolicy: {{ .Values.db.cluster.image.pullPolicy | default "IfNotPresent" }}
+  instances: {{ $cfg.cluster.instances | default 1 }}
+  imageName: {{ $cfg.image.repository | default "ghcr.io/cloudnative-pg" }}:{{ $cfg.image.tag | default "18-standard-trixie" }}
+  imagePullPolicy: {{ $cfg.image.pullPolicy | default "IfNotPresent" }}
+  {{- include "project.imagePullSecrets" $root | nindent 2 }}
+
   superuserSecret:
-    name: {{ .Values.db.cluster.superuser.credentials | default "db-super-credentials" }}
-  # Custom UID/GID for the postgres user inside the container - not needed unless you have special requirements
-  # postgresUID: 101
-  # postgresGID: 102
-  enableSuperuserAccess: true
+    name: {{ $cfg.cluster.superuser.credentials | default (printf "%s-%s-super-credentials" (include "project.name" $root) $name) }}
+  {{- if $cfg.cluster.postgresUID }}
+  postgresUID: {{ $cfg.cluster.postgresUID }}
+  {{- end }}
+  {{- if $cfg.cluster.postgresGID }}
+  postgresGID: {{ $cfg.cluster.postgresGID }}
+  {{- end }}
+  enableSuperuserAccess: {{ $cfg.cluster.enableSuperuserAccess | default false }}
+
+  {{- with $cfg.cluster.storage }}
   storage:
-    size: {{ .Values.db.cluster.storage.size | default "5Gi" }}
+    {{- toYaml . | nindent 6 }}
+  {{- end }}
 
   bootstrap:
-  {{- if .Values.db.cluster.bootstrap.backupSource }}
-  # To restore from a backup
+  {{- if and $cfg.cluster.bootstrap.initdb $cfg.cluster.bootstrap.initdb.enabled }}
+    initdb:
+      database: {{ $cfg.cluster.bootstrap.initdb.dbName | default "transcrobes" }}
+      owner: {{ $cfg.cluster.bootstrap.initdb.dbOwner | default "transcrobes" }}
+      secret:
+        name: {{ $cfg.cluster.user.credentials | default (printf "%s-%s-db-credentials" (include "project.name" $root) $name) }}
+      {{- if $cfg.cluster.bootstrap.initdb.postInitApplicationSQL }}
+      postInitApplicationSQL:
+        {{- toYaml $cfg.cluster.bootstrap.initdb.postInitApplicationSQL | nindent 8 }}
+      {{- end }}
+
+  {{- else }}
     recovery:
-      source: "db-cluster-bootstrap-source"
+      source: {{ $cfg.cluster.bootstrap.recovery.source | default (printf "%s-%s-bootstrap-source" (include "project.name" $root) $name) }}
   externalClusters:
-  - name: "db-cluster-bootstrap-source"
+  - name: {{ $cfg.cluster.bootstrap.recovery.externalClusterName | default (printf "%s-%s-bootstrap-source" (include "project.name" $root) $name) }}
     plugin:
       name: barman-cloud.cloudnative-pg.io
       parameters:
-        barmanObjectName: {{ .Values.db.cluster.bootstrap.recovery.barmanObjectName | default "s3-store-db" }}
-
-  {{- else }}
-  # To bootstrap a new database (needs supabase-migratejob.yaml afterwards)
-    initdb:
-      database: {{ .Values.db.cluster.bootstrap.dbName | default "hazel" }}
-      owner: {{ .Values.db.cluster.bootstrap.dbOwner | default "hazel" }}
-      secret:
-        name: {{ .Values.db.cluster.user.credentials | default "hazel-db-credentials" }}
+        barmanObjectName: {{ $cfg.cluster.bootstrap.recovery.barmanObjectName | default "db-backups-recovery" }}
   {{- end }}
 
-  {{- if and .Values.db.cluster.walArchive.enabled .Values.db.cluster.walArchive.barmanObjectName }}
+  {{- if and $cfg.cluster.walArchive $cfg.cluster.walArchive.enabled $cfg.cluster.walArchive.barmanObjectName }}
   plugins:
   - name: barman-cloud.cloudnative-pg.io
-    isWALArchiver: true
+    isWALArchiver: {{ $cfg.cluster.walArchive.enabled | default false }}
     parameters:
-      barmanObjectName: {{ .Values.db.cluster.walArchive.barmanObjectName | default "s3-store-db" }}
+      barmanObjectName: {{ $cfg.cluster.walArchive.barmanObjectName | default "s3-store-db" }}
   {{- end }}
 
-  {{- if or .Values.db.cluster.managed.services .Values.db.cluster.extraRoles }}
+  {{- if $cfg.cluster.postgresql }}
+  postgresql:
+    {{- with $cfg.cluster.postgresql.shared_preload_libraries }}
+    shared_preload_libraries:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with $cfg.cluster.postgresql.pg_hba }}
+    pg_hba:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with $cfg.cluster.postgresql.pg_ident }}
+    pg_ident:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with $cfg.cluster.postgresql.parameters }}
+    parameters:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with $cfg.cluster.postgresql.extensions }}
+    extensions:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  {{- end }}
+
+  {{- if and $cfg.projectedVolumeTemplate $cfg.projectedVolumeTemplate.sources }}
+  projectedVolumeTemplate:
+    {{- with $cfg.projectedVolumeTemplate.sources }}
+    sources:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  {{- end }}
+
+  {{- if or (and $cfg.cluster.managed $cfg.cluster.managed.services) $cfg.cluster.extraRoles }}
   managed:
-    {{- with .Values.db.cluster.managed.services }}
+    {{- if dig "managed" "services" "false" $cfg.cluster }}
+    {{- with $cfg.cluster.managed.services }}
     services:
       {{ . | toYaml | nindent 6 }}
     {{- end }}
+    {{- end }}
 
-    {{- if .Values.db.cluster.extraRoles }}
+    {{- if $cfg.cluster.extraRoles }}
     roles:
-      {{- toYaml .Values.db.cluster.extraRoles | nindent 6 }}
-
+      {{- toYaml $cfg.cluster.extraRoles | nindent 6 }}
     {{- end }}
   {{- end }}
+{{- end }}
+{{- end }}
 {{- end }}

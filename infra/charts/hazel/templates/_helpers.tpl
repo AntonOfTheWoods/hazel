@@ -1,537 +1,482 @@
-{{- define "hazel.ingressroute.tlscertificate" -}}
-{{- $component := .component -}}
-{{- $root := .root -}}
-{{- $existingTlsSecretName := index $root.Values.hazel $component "existingTlsSecretName" -}}
-{{- $host := index $root.Values.hazel $component "host" -}}
-{{- $generatedTlsSecretName := $host | replace "." "-" }}
-{{- $tlsIssuerName := index $root.Values.hazel $component "tlsIssuerName" -}}
-{{- $tlsIssuerKind := index $root.Values.hazel $component "tlsIssuerKind" -}}
-{{- if not $existingTlsSecretName }}
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: {{ $generatedTlsSecretName | quote }}
-spec:
-  secretName: {{ $generatedTlsSecretName | quote }}
-  issuerRef:
-    name: {{ $tlsIssuerName | quote }}
-    {{- if $tlsIssuerKind }}
-    kind: {{ $tlsIssuerKind | quote }}
-    {{- end }}
-  dnsNames:
-    - {{ $host | quote }}
-{{- end }}
-{{- end -}}
+{{/*
+SPDX-License-Identifier: APACHE-2.0
+*/}}
 
-{{- define "hazel.ingressroute.tlsname" -}}
-{{- $component := .component -}}
-{{- $root := .root -}}
-{{- $existingTlsSecretName := index $root.Values.hazel $component "existingTlsSecretName" -}}
-{{- $host := index $root.Values.hazel $component "host" -}}
-{{- $generatedTlsSecretName := $host | replace "." "-" }}
-{{- if $existingTlsSecretName }}
-secretName: {{ $existingTlsSecretName | quote }}
-{{- else }}
-secretName: {{ $generatedTlsSecretName | quote }}
-{{- end }}
+{{/*
+Return the proper hazel image name
+*/}}
+{{- define "hazel.image" -}}
+{{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
 {{- end -}}
 
 {{/*
-  Template: hazel.ingressroute.integratedtls
-  Usage: {{ include "hazel.ingressroute.integratedtls" (dict "component" "cms" "root" .) }}
-  Renders the tls object for an IngressRoute, using existingTlsSecretName if set, otherwise certResolver.
-  TODO: remove if not needed
+Return the proper Docker Image Registry Secret Names
 */}}
-{{- define "hazel.ingressroute.integratedtls" -}}
-{{- $component := .component -}}
-{{- $root := .root -}}
-{{- $existingTlsSecretName := index $root.Values.hazel $component "existingTlsSecretName" -}}
-{{- $certResolver := $root.Values.hazel.traefik.certResolver -}}
-{{- if $existingTlsSecretName }}
-secretName: {{ $existingTlsSecretName | quote }}
-{{- else }}
-certResolver: {{ $certResolver | quote }}
-{{- end }}
+{{- define "hazel.imagePullSecrets" -}}
+{{- include "common.images.renderPullSecrets" (dict "images" (list .Values.image) "context" $) -}}
 {{- end -}}
 
 {{/*
-  InitContainer to wait for Argo Workflow completion using curl
-  Usage: {{ include "hazel.waitForArgoWorkflowInitContainer" (dict "namespace" .Values.global.namespace) }}
-  TODO: remove if not needed
-*/}}
-{{- define "hazel.waitForArgoWorkflowInitContainer" -}}
-- name: wait-for-migrations
-  image: nixery.dev/shell/curl/jq
-  imagePullPolicy: IfNotPresent
-  command:
-    - /bin/sh
-    - -c
-    - |
-      # This init container waits for an Argo Workflow to complete. It supports two modes:
-      # 1) If WORKFLOW_NAME is provided (environment variable override), wait for that workflow.
-      # 2) Otherwise, wait for the latest Workflow created from the WorkflowTemplate
-      #    named WORKFLOW_TEMPLATE_NAME (default: hazel-init-workflow-template).
-      TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
-      CA_CERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-      NAMESPACE={{ .namespace }}
-      # Optional overrides: you can set WORKFLOW_NAME or WORKFLOW_TEMPLATE_NAME via env when using the helper
-      WORKFLOW_NAME=${WORKFLOW_NAME:-}
-      WORKFLOW_TEMPLATE_NAME=${WORKFLOW_TEMPLATE_NAME:-hazel-init-workflow-template}
-      API_SERVER=https://kubernetes.default.svc
-
-      echo "Waiting for Argo Workflow (template='$WORKFLOW_TEMPLATE_NAME', name='$WORKFLOW_NAME') in namespace $NAMESPACE"
-      echo "Using jq version: $(jq --version)"
-
-      while true; do
-        if [ -z "$WORKFLOW_NAME" ]; then
-          # Find the most recent Workflow created from the WorkflowTemplate
-          echo "$(curl -s --cacert $CA_CERT -H "Authorization: Bearer $TOKEN" "$API_SERVER/apis/argoproj.io/v1alpha1/namespaces/$NAMESPACE/workflows")"
-          echo "--------------------------------"
-          WORKFLOW_NAME=$(curl -s --cacert $CA_CERT -H "Authorization: Bearer $TOKEN" \
-            "$API_SERVER/apis/argoproj.io/v1alpha1/namespaces/$NAMESPACE/workflows" \
-            | jq -r --arg tpl "$WORKFLOW_TEMPLATE_NAME" '.items[] | select(.spec.workflowTemplateRef.name == $tpl) | .metadata.name' \
-            | sort | tail -n 1)
-          if [ -z "$WORKFLOW_NAME" ]; then
-            echo "No workflow found for template '$WORKFLOW_TEMPLATE_NAME' yet. Waiting..."
-            sleep 5
-            continue
-          fi
-          echo "Found workflow $WORKFLOW_NAME for template $WORKFLOW_TEMPLATE_NAME"
-        fi
-
-        status=$(curl -s --cacert $CA_CERT -H "Authorization: Bearer $TOKEN" \
-          "$API_SERVER/apis/argoproj.io/v1alpha1/namespaces/$NAMESPACE/workflows/$WORKFLOW_NAME" \
-          | jq -r '.status.phase' 2>/dev/null)
-
-        if [ "$status" = "Succeeded" ]; then
-          echo "Argo Workflow '$WORKFLOW_NAME' completed successfully."
-          break
-        elif [ "$status" = "Failed" ] || [ "$status" = "Error" ]; then
-          echo "Argo Workflow '$WORKFLOW_NAME' failed or errored. Exiting."
-          exit 1
-        elif [ -z "$status" ] || [ "$status" = "null" ]; then
-          echo "Workflow $WORKFLOW_NAME not found or no status yet. Resetting name and waiting..."
-          WORKFLOW_NAME=
-          sleep 5
-          continue
-        fi
-
-        echo "Workflow status: $status. Waiting..."
-        sleep 10
-      done
-{{- end }}
-{{/*
-Expand the name of the chart.
-*/}}
-{{- define "hazel.name" -}}
-{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
-{{- end }}
-
-{{/*
-Create a default fully qualified app name.
+Create a default fully qualified name for hazel web component.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
-If release name contains chart name it will be used as a full name.
 */}}
-{{- define "hazel.fullname" -}}
-{{- if .Values.fullnameOverride }}
-{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- $name := default .Chart.Name .Values.nameOverride }}
-{{- if contains $name .Release.Name }}
-{{- .Release.Name | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
-{{- end }}
-{{- end }}
-{{- end }}
+{{- define "hazel.web.fullname" -}}
+{{- printf "%s-web" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
 
 {{/*
-Create chart name and version as used by the chart label.
+Create a default fully qualified name for hazel Celery flower component.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
-{{- define "hazel.chart" -}}
-{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
-{{- end }}
+{{- define "hazel.flower.fullname" -}}
+{{- printf "%s-flower" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
 
 {{/*
-Common labels
+Create a default fully qualified name for hazel Celery worker component.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
-{{- define "hazel.labels" -}}
-helm.sh/chart: {{ include "hazel.chart" . }}
-app.kubernetes.io/name: {{ include "hazel.name" . }}
-app.kubernetes.io/instance: hazel-{{ .Values.global.instanceId }}
-app.kubernetes.io/version: {{ .Values.global.hazelVersion | quote }}
-app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/part-of: hazel
-{{- with .Values.commonLabels }}
-{{- toYaml . | nindent 0 }}
-{{- end }}
-{{- end }}
+{{- define "hazel.worker.fullname" -}}
+{{- printf "%s-worker" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
 
 {{/*
-Selector labels
+Create a default fully qualified name for hazel Celery beat component.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
-{{- define "hazel.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "hazel.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
-{{- end }}
+{{- define "hazel.beat.fullname" -}}
+{{- printf "%s-beat" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
 
 {{/*
-Component-specific labels
+Create a default fully qualified postgresql name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
-{{- define "hazel.componentLabels" -}}
-{{- $component := .component }}
-{{- include "hazel.labels" .root | nindent 0 }}
-app.kubernetes.io/component: {{ $component }}
-{{- end }}
+{{- define "hazel.postgresql.fullname" -}}
+{{- include "common.names.dependency.fullname" (dict "chartName" "postgresql" "chartValues" .Values.postgresql "context" $) -}}
+{{- end -}}
 
 {{/*
-Component-specific selector labels
+Create a default fully qualified redis name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
-{{- define "hazel.componentSelectorLabels" -}}
-{{- $component := .component }}
-app.kubernetes.io/name: {{ include "hazel.name" .root }}
-app.kubernetes.io/instance: hazel-{{ .root.Values.global.instanceId }}
-app.kubernetes.io/component: {{ $component }}
-{{- end }}
-
-{{/*
-Common annotations that match Kustomize commonAnnotations
-*/}}
-{{- define "hazel.annotations" -}}
-app.kubernetes.io/version: {{ .Values.global.hazelVersion | quote }}
-{{- with .Values.commonAnnotations }}
-{{- toYaml . | nindent 0 }}
-{{- end }}
-{{- end }}
+{{- define "hazel.redis.fullname" -}}
+{{- include "common.names.dependency.fullname" (dict "chartName" "redis" "chartValues" .Values.redis "context" $) -}}
+{{- end -}}
 
 {{/*
 Create the name of the service account to use
 */}}
 {{- define "hazel.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "hazel.fullname" .) .Values.serviceAccount.name }}
+{{- if .Values.serviceAccount.create -}}
+    {{ default (include "common.names.fullname" .) .Values.serviceAccount.name }}
+{{- else -}}
+    {{ default "default" .Values.serviceAccount.name }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get the Redis&reg; credentials secret.
+*/}}
+{{- define "hazel.redis.secretName" -}}
+{{- if .Values.redis.enabled -}}
+    {{- $name := default "redis" .Values.redis.nameOverride -}}
+    {{- default (printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-") (tpl .Values.redis.auth.existingSecret $) -}}
 {{- else }}
-{{- default "default" .Values.serviceAccount.name }}
-{{- end }}
-{{- end }}
+    {{- default (printf "%s-externalredis" .Release.Name) (tpl .Values.externalRedis.existingSecret $) -}}
+{{- end -}}
+{{- end -}}
 
 {{/*
-Generate image reference
+Get the Postgresql credentials secret.
 */}}
-{{- define "hazel.image" -}}
-{{- $comp := .component -}}
-{{- if eq $comp "hazel" -}}
-  {{- $img := .root.Values.hazel.image -}}
-  {{- printf "%s:%s" $img.repository $img.tag -}}
-{{- else if hasKey .root.Values.hazel $comp -}}
-  {{- $img := (index .root.Values.hazel $comp).image -}}
-  {{- printf "%s:%s" $img.repository $img.tag -}}
+{{- define "hazel.postgresql.secretName" -}}
+{{- if .Values.postgresql.enabled }}
+    {{- tpl (coalesce (((.Values.global).postgresql).auth).existingSecret .Values.postgresql.auth.existingSecret (include "hazel.postgresql.fullname" .)) $ -}}
 {{- else -}}
-  {{- printf "" -}}
+    {{- default (printf "%s-externaldb" .Release.Name) (tpl .Values.externalDatabase.existingSecret $) -}}
 {{- end -}}
-{{- end }}
+{{- end -}}
 
 {{/*
-Pull policy for images
+Get the hazel Celery flower secret name
 */}}
-{{- define "hazel.imagePullPolicy" -}}
-{{- $comp := .component -}}
-{{- if eq $comp "hazel" -}}
-  {{- .root.Values.hazel.image.pullPolicy | default "IfNotPresent" -}}
-{{- else if hasKey .root.Values.hazel $comp -}}
-  {{- ((index .root.Values.hazel $comp).image.pullPolicy) | default "IfNotPresent" -}}
+{{- define "hazel.flower.secretName" -}}
+{{- default (include "hazel.flower.fullname" .) (tpl .Values.flower.auth.existingSecret .) -}}
+{{- end -}}
+
+{{/*
+Get the secret name
+*/}}
+{{- define "hazel.secretName" -}}
+{{- default (include "common.names.fullname" .) (tpl .Values.auth.existingSecret .) -}}
+{{- end -}}
+
+{{/*
+Get the configmap name
+*/}}
+{{- define "hazel.configMapName" -}}
+{{- default (printf "%s-configuration" (include "common.names.fullname" .)) (tpl .Values.existingConfigmap .) -}}
+{{- end -}}
+
+{{/*
+Add environment variables to configure database values
+*/}}
+{{- define "hazel.database.host" -}}
+{{- if eq .Values.postgresql.architecture "replication" }}
+    {{- printf "%s-primary" (ternary (include "hazel.postgresql.fullname" .) (tpl .Values.externalDatabase.host $) .Values.postgresql.enabled) -}}
 {{- else -}}
-  {{- printf "IfNotPresent" -}}
+    {{- ternary (include "hazel.postgresql.fullname" .) (tpl .Values.externalDatabase.host $) .Values.postgresql.enabled -}}
 {{- end -}}
-{{- end }}
-
-{{/*
-Shared environment variables
-*/}}
-{{- define "hazel.common.env" -}}
-# Shared settings
-
-- name: KV_ENGINE
-  value: {{ .Values.hazel.cache.backend.engine | quote }}
-- name: KV_HOST
-  value: {{ .Values.hazel.cache.backend.host | quote }}
-- name: KV_PORT
-  value: {{ .Values.hazel.cache.backend.port | quote }}
-- name: KV_USERNAME
-  valueFrom:
-    secretKeyRef:
-      name: {{ .Values.hazel.cache.backend.credentials }}
-      key: username
-- name: KV_PASSWORD
-  valueFrom:
-    secretKeyRef:
-      name: {{ .Values.hazel.cache.backend.credentials }}
-      key: password
-- name: HAZEL_CACHE_KV_DB
-  value: {{ .Values.hazel.cache.backend.db | quote }}
-
-- name: SMTP_USE_SSL
-  value: {{ .Values.hazel.smtp.useSSL | quote }}
-
-- name: JWT_RSA_PRIVATE_KEY
-  valueFrom:
-    secretKeyRef:
-      name: {{ .Values.hazel.jwtRsaPrivateKey.secretName }}
-      key: {{ .Values.hazel.jwtRsaPrivateKey.secretKey }}
-- name: JWT_COMMON_ISSUER
-  value: "https://{{ .Values.hazel.lms.host }}/oauth2"
-- name: JWT_COMMON_AUDIENCE
-  value: {{ .Values.hazel.jwtCommonAudience | quote }}
-- name: JWT_COMMON_SECRET_KEY
-  valueFrom:
-    secretKeyRef:
-      name: {{ .Values.hazel.jwtCommonSecretKey.secretName }}
-      key: {{ .Values.hazel.jwtCommonSecretKey.secretKey }}
-- name: HAZEL_SECRET_KEY
-  valueFrom:
-    secretKeyRef:
-      name: {{ .Values.hazel.secretKey.secretName }}
-      key: {{ .Values.hazel.secretKey.secretKey }}
-
-- name: S3_GRADE_BUCKET
-  value: {{ .Values.hazel.s3.gradeBucket | quote }}
-- name: S3_PROFILE_IMAGE_BUCKET
-  value: {{ .Values.hazel.s3.profileImageBucket | quote }}
-- name: S3_STORAGE_BUCKET
-  value: {{ .Values.hazel.s3.storageBucket | quote }}
-- name: S3_FILE_UPLOAD_BUCKET
-  value: {{ .Values.hazel.s3.fileUploadBucket | quote }}
-
-# FIXME: what are these? Do we need them?
-- name: S3_CUSTOM_DOMAIN
-  value: {{ .Values.hazel.s3.s3CustomDomain | quote }}
-- name: S3_PROFILE_IMAGE_CUSTOM_DOMAIN
-  value: {{ .Values.hazel.s3.s3ProfileImageCustomDomain | quote }}
-
-- name: S3_SIGNATURE_VERSION
-  value: {{ .Values.hazel.s3.signatureVersion | quote }}
-- name: S3_REQUEST_CHECKSUM_CALCULATION
-  value: {{ .Values.hazel.s3.requestChecksumCalculation | quote }}
-- name: S3_HOST
-  value: {{ .Values.hazel.s3.host | quote }}
-- name: S3_PORT
-  value: {{ .Values.hazel.s3.port | quote }}
-- name: S3_USE_SSL
-  value: {{ .Values.hazel.s3.useSSL | quote }}
-- name: S3_DEFAULT_ACL
-  value: {{ .Values.hazel.s3.defaultACL | quote }}
-- name: S3_ADDRESSING_STYLE
-  value: {{ .Values.hazel.s3.addressingStyle | quote }}
-- name: S3_REGION
-  value: {{ .Values.hazel.s3.region | quote }}
-
-{{- end }}
-
-{{/*
-Shared dev volume mounts
-*/}}
-{{- define "hazel.dev.volumeMounts" -}}
-{{- if and .Values.hazel.isDev .Values.hazel.local.src }}
-- name: edx-platform
-  mountPath: /hazel/edx-platform
-- name: mnt
-  mountPath: /mnt
-{{- end }}
 {{- end -}}
 
 {{/*
-Shared dev volumes
+Add environment variables to configure database values
 */}}
-{{- define "hazel.dev.volumes" -}}
-{{- if and .Values.hazel.isDev .Values.hazel.local.src }}
-- name: edx-platform
-  hostPath:
-    path: /hazel/edx-platform
-- name: mnt
-  hostPath:
-    path: /mnt
+{{- define "hazel.database.user" -}}
+{{- if .Values.postgresql.enabled }}
+    {{- default .Values.postgresql.auth.username (((.Values.global).postgresql).auth).username -}}
+{{- else -}}
+    {{- .Values.externalDatabase.user -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Add environment variables to configure database values
+*/}}
+{{- define "hazel.database.name" -}}
+{{- if .Values.postgresql.enabled }}
+    {{- default .Values.postgresql.auth.database (((.Values.global).postgresql).auth).database -}}
+{{- else -}}
+    {{- .Values.externalDatabase.database -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Add environment variables to configure database values
+*/}}
+{{- define "hazel.database.secretKey" -}}
+{{- ternary "password" (tpl .Values.externalDatabase.existingSecretPasswordKey .) .Values.postgresql.enabled -}}
+{{- end -}}
+
+{{/*
+Add environment variables to configure database values
+*/}}
+{{- define "hazel.database.port" -}}
+{{- if .Values.postgresql.enabled -}}
+    {{- default .Values.postgresql.primary.service.ports.postgresql ((((.Values.global).postgresql).service).ports).postgresql -}}
+{{- else -}}
+    {{- .Values.externalDatabase.port -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Add environment variables to configure redis values
+*/}}
+{{- define "hazel.redis.host" -}}
+{{- if .Values.redis.enabled -}}
+    {{- printf "%s-master" (include "hazel.redis.fullname" .) -}}
+{{- else -}}
+    {{- printf "%s" (tpl .Values.externalRedis.host $) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Add environment variables to configure redis values
+*/}}
+{{- define "hazel.redis.port" -}}
+{{- ternary .Values.redis.master.service.ports.redis .Values.externalRedis.port .Values.redis.enabled -}}
+{{- end -}}
+
+{{/*
+Add environment variables to configure redis values
+*/}}
+{{- define "hazel.redis.secretKey" -}}
+{{- ternary "redis-password" (tpl .Values.externalRedis.existingSecretPasswordKey .) .Values.redis.enabled -}}
+{{- end -}}
+
+{{/*
+Add environment variables to configure database values
+*/}}
+{{- define "hazel.configure.database" -}}
+- name: hazel_DATABASE_HOST
+  value: {{ include "hazel.database.host" . | quote }}
+- name: hazel_DATABASE_PORT_NUMBER
+  value: {{ include "hazel.database.port" . | quote }}
+- name: hazel_DATABASE_NAME
+  value: {{ include "hazel.database.name" . | quote }}
+- name: hazel_DATABASE_USER
+  value: {{ include "hazel.database.user" . | quote }}
+{{- if or (not .Values.postgresql.enabled) .Values.postgresql.auth.enablePostgresUser }}
+{{- if .Values.usePasswordFiles }}
+- name: hazel_DATABASE_PASSWORD_FILE
+  value: {{ printf "/opt/bitnami/hazel/secrets/%s" (include "hazel.database.secretKey" .) }}
+{{- else }}
+- name: hazel_DATABASE_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "hazel.postgresql.secretName" . }}
+      key: {{ include "hazel.database.secretKey" . }}
+{{- end }}
+{{- else }}
+- name: ALLOW_EMPTY_PASSWORD
+  value: "true"
 {{- end }}
 {{- end -}}
 
 {{/*
-CA trust init container for development with component parameter
-Usage: {{ include "hazel.dev.caInitContainerForComponent" (dict "component" "mfe" "root" .) }}
-Uses the specified component's image to ensure cert compatibility
+Add environment variables to configure redis values
 */}}
-{{- define "hazel.dev.caInitContainerForComponent" -}}
-{{- $component := .component -}}
-{{- $root := .root -}}
-{{- if $root.Values.hazel.isDev }}
-- name: install-custom-ca
-  image: {{ include "hazel.image" (dict "component" $component "root" $root) }}
-  imagePullPolicy: {{ include "hazel.imagePullPolicy" (dict "component" $component "root" $root) }}
-  securityContext:
-    runAsUser: 0
+{{- define "hazel.configure.redis" -}}
+- name: REDIS_HOST
+  value: {{ include "hazel.redis.host" . | quote }}
+- name: REDIS_PORT_NUMBER
+  value: {{ include "hazel.redis.port" . | quote }}
+- name: REDIS_USER
+  value: {{ ternary "default" .Values.externalRedis.username .Values.redis.enabled  | quote }}
+{{- if .Values.usePasswordFiles }}
+- name: REDIS_PASSWORD_FILE
+  value: {{ printf "/opt/bitnami/hazel/secrets/%s" (include "hazel.redis.secretKey" .) }}
+{{- else }}
+- name: REDIS_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "hazel.redis.secretName" . }}
+      key: {{ include "hazel.redis.secretKey" . }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Add environment variables to configure hazel common values
+*/}}
+{{- define "hazel.configure.common" -}}
+{{- if .Values.usePasswordFiles }}
+- name: hazel_SECRET_KEY_FILE
+  value: "/opt/bitnami/hazel/secrets/hazel-secret-key"
+{{- else }}
+- name: hazel_SECRET_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "hazel.secretName" . }}
+      key: hazel-secret-key
+{{- end }}
+{{- if or .Values.existingConfigmap .Values.config }}
+- name: hazel_CONF_FILE
+  value: "/bitnami/hazel/conf/hazel_config.py"
+{{- end }}
+- name: BITNAMI_DEBUG
+  value: {{ ternary "true" "false" .Values.image.debug | quote }}
+{{- end -}}
+
+{{/*
+Init container definition to wait for PostgreSQL
+# NOTE: The value postgresql.image is not available unless postgresql.enabled is not set. We could change this to use os-shell if
+# it had the binary wait-for-port.
+*/}}
+{{- define "hazel.initContainers.waitForDB" -}}
+- name: wait-for-db
+  image: {{ include "common.images.image" (dict "imageRoot" .Values.postgresql.image "global" .Values.global) }}
+  imagePullPolicy: {{ .Values.postgresql.image.pullPolicy  }}
+  {{- if .Values.defaultInitContainers.waitForDB.resources }}
+  resources: {{ toYaml .Values.defaultInitContainers.waitForDB.resources | nindent 4 }}
+  {{- else if ne .Values.defaultInitContainers.waitForDB.resourcesPreset "none" }}
+  resources: {{- include "common.resources.preset" (dict "type" .Values.defaultInitContainers.waitForDB.resourcesPreset) | nindent 4 }}
+  {{- end }}
+  {{- if .Values.defaultInitContainers.waitForDB.containerSecurityContext.enabled }}
+  securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.defaultInitContainers.waitForDB.containerSecurityContext "context" $) | nindent 4 }}
+  {{- end }}
   command:
-  - sh
-  - -c
-  - |
-    # Copy system certs from the image to our emptyDir volumes
-    cp -r /etc/ssl/certs/* /shared-etc-ssl-certs/ 2>/dev/null || true
-    cp -r /usr/local/share/ca-certificates/* /shared-usr-local-ca-certs/ 2>/dev/null || true
+    - /bin/bash
+  args:
+    - -ec
+    - |
+        set -o errexit
+        set -o nounset
+        set -o pipefail
 
-    # Add our custom CA
-    cp /tmp/ca-bundle/ca-bundle.crt /shared-usr-local-ca-certs/mkcert-ca.crt
+        . /opt/bitnami/scripts/libos.sh
+        . /opt/bitnami/scripts/liblog.sh
+        . /opt/bitnami/scripts/libpostgresql.sh
 
-    # Run update-ca-certificates with the shared directories
-    # We need to temporarily mount them in the standard locations
-    rm -rf /etc/ssl/certs/*
-    rm -rf /usr/local/share/ca-certificates/*
-    cp -r /shared-etc-ssl-certs/* /etc/ssl/certs/
-    cp -r /shared-usr-local-ca-certs/* /usr/local/share/ca-certificates/
+        {{- if .Values.usePasswordFiles }}
+        export hazel_DATABASE_PASSWORD="$(< $hazel_DATABASE_PASSWORD_FILE)"
+        {{- end }}
 
-    update-ca-certificates
+        check_postgresql_connection() {
+            echo "SELECT 1" | postgresql_remote_execute "$hazel_DATABASE_HOST" "$hazel_DATABASE_PORT_NUMBER" "$hazel_DATABASE_NAME" "$hazel_DATABASE_USER" "$hazel_DATABASE_PASSWORD"
+        }
 
-    # Copy back the updated certs to shared volumes
-    cp -r /etc/ssl/certs/* /shared-etc-ssl-certs/
-    cp -r /usr/local/share/ca-certificates/* /shared-usr-local-ca-certs/
-
-    # Ensure readable by all users
-    chmod -R 755 /shared-etc-ssl-certs
-    chmod -R 755 /shared-usr-local-ca-certs
-    echo "Custom CA installed successfully"
+        info "Connecting to the PostgreSQL instance $hazel_DATABASE_HOST:$hazel_DATABASE_PORT_NUMBER"
+        if ! retry_while "check_postgresql_connection"; then
+            error "Could not connect to the database server"
+            exit 1
+        else
+            info "Connected to the PostgreSQL instance"
+        fi
+  env:
+    {{- include "hazel.configure.database" . | nindent 4 }}
+  {{- if .Values.usePasswordFiles }}
   volumeMounts:
-  - name: ca-bundle
-    mountPath: /tmp/ca-bundle
-    readOnly: true
-  - name: usr-local-share-ca-certs
-    mountPath: /shared-usr-local-ca-certs
-  - name: etc-ssl-certs
-    mountPath: /shared-etc-ssl-certs
-{{- end }}
+    - name: hazel-secrets
+      mountPath: /opt/bitnami/hazel/secrets
+      readOnly: true
+  {{- end }}
 {{- end -}}
 
 {{/*
-CA trust volume mounts for development
+Init container definition to wait for Redis
 */}}
-{{- define "hazel.dev.caVolumeMounts" -}}
-{{- if .Values.hazel.isDev }}
-- name: usr-local-share-ca-certs
-  mountPath: /usr/local/share/ca-certificates
-- name: etc-ssl-certs
-  mountPath: /etc/ssl/certs
-{{- end }}
-{{- end -}}
-
-{{/*
-CA trust init container for MinIO mc (Alpine-based)
-mc uses ${MC_CONFIG_DIR}/certs/CAs/ for custom CA certificates
-*/}}
-{{- define "hazel.dev.mcCaInitContainer" -}}
-{{- if .Values.hazel.isDev }}
-- name: install-custom-ca
-  image: alpine:latest
-  imagePullPolicy: IfNotPresent
-  securityContext:
-    runAsUser: 1000
-    runAsNonRoot: true
-    allowPrivilegeEscalation: false
+{{- define "hazel.initContainers.waitForRedis" -}}
+# NOTE: The value redis.image is not available unless redis.enabled is not set. We could change this to use os-shell if
+# it had the binary wait-for-port.
+- name: wait-for-redis
+  image: {{ include "common.images.image" (dict "imageRoot" .Values.redis.image "global" .Values.global) }}
+  imagePullPolicy: {{ .Values.redis.image.pullPolicy | quote }}
+  {{- if .Values.defaultInitContainers.waitForRedis.resources }}
+  resources: {{ toYaml .Values.defaultInitContainers.waitForRedis.resources | nindent 4 }}
+  {{- else if ne .Values.defaultInitContainers.waitForRedis.resourcesPreset "none" }}
+  resources: {{- include "common.resources.preset" (dict "type" .Values.defaultInitContainers.waitForRedis.resourcesPreset) | nindent 4 }}
+  {{- end }}
+  {{- if .Values.defaultInitContainers.waitForRedis.containerSecurityContext.enabled }}
+  securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.defaultInitContainers.waitForRedis.containerSecurityContext "context" $) | nindent 4 }}
+  {{- end }}
   command:
-  - sh
-  - -c
-  - |
-    # Create the mc CAs directory
-    mkdir -p /mc-config/certs/CAs
+    - /bin/bash
+  args:
+    - -ec
+    - |
+        set -o errexit
+        set -o nounset
+        set -o pipefail
 
-    # Copy the custom CA certificate
-    cp /tmp/ca-bundle/ca-bundle.crt /mc-config/certs/CAs/mkcert-ca.crt
+        . /opt/bitnami/scripts/libos.sh
+        . /opt/bitnami/scripts/liblog.sh
 
-    echo "Custom CA installed successfully in /mc-config/certs/CAs/"
+        {{- if .Values.usePasswordFiles }}
+        export REDIS_PASSWORD="$(< $REDIS_PASSWORD_FILE)"
+        {{- end }}
+
+        check_redis_connection() {
+            local result="$(redis-cli -h ${REDIS_HOST} -p ${REDIS_PORT_NUMBER} -a ${REDIS_PASSWORD} --user ${REDIS_USER} PING)"
+            if [[ "$result" != "PONG" ]]; then
+            false
+            fi
+        }
+
+        info "Checking redis connection..."
+        if ! retry_while "check_redis_connection"; then
+            error "Could not connect to the Redis server"
+            exit 1
+        else
+            info "Connected to the Redis instance"
+        fi
+  env:
+    {{- include "hazel.configure.redis" . | nindent 4 }}
+  {{- if .Values.usePasswordFiles }}
   volumeMounts:
-  - name: ca-bundle
-    mountPath: /tmp/ca-bundle
-    readOnly: true
-  - name: mc-config
-    mountPath: /mc-config
+    - name: hazel-secrets
+      mountPath: /opt/bitnami/hazel/secrets
+      readOnly: true
+  {{- end }}
 {{- end }}
-{{- end -}}
 
-{{/*
-CA trust volumes for development
-*/}}
-{{- define "hazel.dev.caVolumes" -}}
-{{- if .Values.hazel.isDev }}
-- name: ca-bundle
-  configMap:
-    name: mkcert-trust-bundle
-- name: usr-local-share-ca-certs
-  emptyDir: {}
-- name: etc-ssl-certs
-  emptyDir: {}
+{{- define "hazel.initContainers.waitForExamples" -}}
+# NOTE: The value postgresql.image is not available unless postgresql.enabled is not set.
+# We could change this to use hazel image postgresql client.
+- name: wait-for-examples
+  image: {{ include "common.images.image" (dict "imageRoot" .Values.postgresql.image "global" .Values.global) }}
+  imagePullPolicy: {{ .Values.postgresql.image.pullPolicy  }}
+  {{- if .Values.web.waitForExamples.resources }}
+  resources: {{ toYaml .Values.web.waitForExamples.resources | nindent 4 }}
+  {{- else if ne .Values.web.waitForExamples.resourcesPreset "none" }}
+  resources: {{- include "common.resources.preset" (dict "type" .Values.web.waitForExamples.resourcesPreset) | nindent 4 }}
+  {{- end }}
+  {{- if .Values.web.waitForExamples.containerSecurityContext.enabled }}
+  securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.web.waitForExamples.containerSecurityContext "context" $) | nindent 4 }}
+  {{- end }}
+  command:
+    - /bin/bash
+  args:
+    - -ec
+    - |
+        set -o errexit
+        set -o nounset
+        set -o pipefail
+
+        . /opt/bitnami/scripts/libos.sh
+        . /opt/bitnami/scripts/liblog.sh
+        . /opt/bitnami/scripts/libpostgresql.sh
+
+        {{- if .Values.usePasswordFiles }}
+        export hazel_DATABASE_PASSWORD="$(< $hazel_DATABASE_PASSWORD_FILE)"
+        {{- end }}
+
+        check_examples_database() {
+            # deck.gl Demo is one of the latest dashboards loaded.
+            echo "SELECT dashboard_title FROM dashboards" | postgresql_remote_execute_print_output "$hazel_DATABASE_HOST" "$hazel_DATABASE_PORT_NUMBER" "$hazel_DATABASE_NAME" "$hazel_DATABASE_USER" "$hazel_DATABASE_PASSWORD" | grep "deck.gl Demo"
+        }
+
+        info "Checking if the 'examples' database exists at $hazel_DATABASE_HOST:$hazel_DATABASE_PORT_NUMBER"
+        # Retry 5 min
+        if ! retry_while "check_examples_database" 60; then
+            error "Examples database not ready yet"
+            exit 1
+        else
+            info "Connected to the PostgreSQL instance"
+        fi
+  env:
+    {{- include "hazel.configure.database" . | nindent 4 }}
+  {{- if .Values.usePasswordFiles }}
+  volumeMounts:
+    - name: hazel-secrets
+      mountPath: /opt/bitnami/hazel/secrets
+      readOnly: true
+  {{- end }}
 {{- end }}
-{{- end -}}
 
 {{/*
-Shared common volume mounts
+Compile all warnings into a single message.
 */}}
-{{- define "hazel.common.volumeMounts" -}}
-- name: config
-  mountPath: /hazel/config
-  readOnly: true
-- name: settings-cms
-  mountPath: /hazel/edx-platform/cms/envs/tutor/
-- name: settings-lms
-  mountPath: /hazel/edx-platform/lms/envs/tutor/
+{{- define "hazel.validateValues" -}}
+{{- $messages := list -}}
+{{- $messages := append $messages (include "hazel.validateValues.database" .) -}}
+{{- $messages := append $messages (include "hazel.validateValues.redis" .) -}}
+{{- $messages := without $messages "" -}}
+{{- $message := join "\n" $messages -}}
+
+{{- if $message -}}
+{{-   printf "\nVALUES VALIDATION:\n%s" $message -}}
+{{- end -}}
 {{- end -}}
 
-{{/*
-Shared common volumes
-*/}}
-{{- define "hazel.common.volumes" -}}
-- name: config
-  secret:
-    secretName: hazel-config
-- name: settings-cms
-  configMap:
-    name: hazel-settings-cms
-- name: settings-lms
-  configMap:
-    name: hazel-settings-lms
+{{/* Validate values of hazel - Postgresql */}}
+{{- define "hazel.validateValues.database" -}}
+{{- if and .Values.postgresql.enabled .Values.externalDatabase.host -}}
+hazel: Database
+    You can only use one database.
+    Please choose installing a Postgresql chart (--set postgresql.enabled=true) or
+    using an external database (--set externalDatabase.host)
+{{- end -}}
+{{- if and (not .Values.postgresql.enabled) (not .Values.externalDatabase.host) -}}
+hazel: NoDatabase
+    You did not set any database.
+    Please choose installing a Postgresql chart (--set postgresql.enabled=true) or
+    using an external instance (--set externalDatabase.host)
+{{- end -}}
 {{- end -}}
 
-{{- define "hazel.imagePullSecrets" -}}
-# FIXME: fill this with real values!!!
-{{ include "common.images.pullSecrets" (dict "images" (list  .Values.hazel.something.image .Values.hazel.somethingelse.image) "global" .Values.global) }}
+{{/* Validate values of hazel - Redis */}}
+{{- define "hazel.validateValues.redis" -}}
+{{- if and .Values.redis.enabled .Values.externalRedis.host -}}
+hazel: Redis
+    You can only use one Redis.
+    Please choose installing a Redis chart (--set redis.enabled=true) or
+    using an external Redis (--set externalRedis.host)
 {{- end -}}
-
-{{/*
-reusable db env vars
-*/}}
-{{- define "hazel.database.envvars" }}
-- name: DB_USER
-  value: {{ include "supabase.database.user" . | quote }}
-- name: DB_HOST
-  value: {{ include "supabase.database.host" . | quote }}
-- name: DB_PORT
-  value: {{ include "supabase.database.port" . | quote }}
-- name: DB_NAME
-  value: {{ include "supabase.database.name" . | quote }}
-- name: DB_PASSWORD
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "supabase.database.secretName" . }}
-      key: {{ include "supabase.database.passwordKey" . | quote }}
-- name: DB_SSL
-  value: {{ .Values.dbSSL | quote }}
-
-# vanilla postgres env vars
-- name: PGDATABASE
-  value: {{ include "supabase.database.name" . | quote }}
-- name: PGUSER
-  value: {{ include "supabase.database.user" . | quote }}
-- name: PGPASSWORD
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "supabase.database.secretName" . }}
-      key: {{ include "supabase.database.passwordKey" . | quote }}
-- name: PGHOST
-  value: {{ include "supabase.database.host" . | quote }}
-- name: PGPORT
-  value: {{ include "supabase.database.port" . | quote }}
-
+{{- if and (not .Values.redis.enabled) (not .Values.externalRedis.host) -}}
+hazel: NoRedis
+    You did not set any Redis.
+    Please choose installing a Redis chart (--set redis.enabled=true) or
+    using an external instance (--set externalRedis.host)
+{{- end -}}
 {{- end -}}

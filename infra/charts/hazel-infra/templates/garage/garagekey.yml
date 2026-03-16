@@ -1,0 +1,23 @@
+apiVersion: garage.rajsingh.info/v1alpha1
+kind: GarageKey
+metadata:
+  name: s3-key
+  # namespace: garage-operator-system
+  # namespace: datest
+spec:
+  clusterRef:
+    name: garage
+
+  name: imported-key
+
+  # Import from existing secret
+  importKey:
+    accessKeyId: username
+    secretAccessKey: password
+    secretRef:
+      name: s3-storage
+      # namespace: datest
+
+  bucketPermissions:
+    - globalAlias: shared-bucket
+      read: true

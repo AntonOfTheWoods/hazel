@@ -1,0 +1,21 @@
+{{- if and (not .Values.dbClusters.db.cluster.bootstrap.initdb.enabled) (not .Values.dbClusters.db.cluster.bootstrap.recovery.backupSource) (ne .Values.dbClusters.db.backups.barmanObjectName .Values.dbClusters.db.cluster.bootstrap.recovery.barmanObjectName) -}}
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: {{ .Values.dbClusters.db.cluster.bootstrap.recovery.barmanObjectName | default "db-backups-recovery" }}
+  annotations:
+    {{- include "transcrobesinfra.annotations" . | nindent 4 }}
+  labels:
+    {{- include "transcrobesinfra.componentLabels" (dict "component" "db" "root" .) | nindent 4 }}
+spec:
+  configuration:
+    destinationPath: s3://{{ .Values.dbClusters.db.cluster.bootstrap.recovery.destinationPath | default "db-backups-recovery" }}
+    endpointURL: {{ printf "%s://%s:%v" (ternary "https" "http" .Values.dbClusters.db.cluster.bootstrap.recovery.useSSL) .Values.dbClusters.db.cluster.bootstrap.recovery.host (.Values.dbClusters.db.cluster.bootstrap.recovery.port | int) | quote }}
+    s3Credentials:
+      accessKeyId:
+        name: {{ .Values.dbClusters.db.cluster.bootstrap.recovery.s3Credentials.accessKeyId.name | default "s3-backups" }}
+        key: {{ .Values.dbClusters.db.cluster.bootstrap.recovery.s3Credentials.accessKeyId.key | default "username" }}
+      secretAccessKey:
+        name: {{ .Values.dbClusters.db.cluster.bootstrap.recovery.s3Credentials.secretAccessKey.name | default "s3-backups" }}
+        key: {{ .Values.dbClusters.db.cluster.bootstrap.recovery.s3Credentials.secretAccessKey.key | default "password" }}
+{{- end -}}

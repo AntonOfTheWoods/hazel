@@ -62,72 +62,177 @@ commonAnnotations: {}
   # App version annotation will be automatically added
   # Additional annotations can be added here
 
-db:
-  enabled: true
-  backups:
-    enabled: true
-    schedule: "0 30 2 * * *"  # At 02:30:00 (UTC) every day
-    retention: 7d          # keep 7 backups
-    barmanObjectName: s3-store-db
-    destinationPath: "hazel-db-backups"
-    host: backups.hazel.localhost
-    port: 80
-    useSSL: false
-    walCompression: bzip2  # bzip2;gzip;lz4;snappy;xz;zstd
-    dataCompression: bzip2  # bzip2;gzip;snappy
-    s3Credentials:
-      accessKeyId:
-        name: s3-backups
-        key: username
-      secretAccessKey:
-        name: s3-backups
-        key: password
 
-  cluster:
+dbClusters:
+  db:
     enabled: true
-    name: db-cluster
-    instances: 1
+    backups:
+      enabled: false
+      schedule: "0 30 2 * * *"  # At 02:30:00 (UTC) every day
+      retention: 3d          # keep 3 backups
+      barmanObjectName: s3-store-db
+      destinationPath: "db-backups"
+      host: backups.hazel.localhost
+      port: 80
+      useSSL: false
+      walCompression: bzip2  # bzip2;gzip;lz4;snappy;xz;zstd
+      dataCompression: bzip2  # bzip2;gzip;snappy
+      s3Credentials:
+        accessKeyId:
+          name: s3-backups
+          key: username
+        secretAccessKey:
+          name: s3-backups
+          key: password
     image:
-      repository: "ghcr.io/cloudnative-pg/postgresql"
-      tag: "18-minimal-trixie"
+      repository: ghcr.io/cloudnative-pg/postgresql
+      tag: 18-minimal-trixie
       pullPolicy: IfNotPresent
-    superuser:
-      credentials: db-super-credentials
-    user:
-      credentials: hazel-db-credentials
-    storage:
-      size: 5Gi
 
-    managed:
-      services:
-        disabledDefaultServices: ["ro", "r"]
-
-    # To bootstrap a new database (needs db-migratejob.yaml afterwards)
-    bootstrap:
+    cluster:
       enabled: true
-      dbName: hazel
-      dbOwner: hazel
-      recovery:
-        # To restore from a backup
-        # backupSource: true
+      name: db-cluster
+      instances: 1
+      superuser:
+        credentials: db-super-credentials
+      user:
+        credentials: hazel-db-credentials
+
+      storage:
+        # either a size string or a full storage spec
+        size: 5Gi
+        # pvcTemplate:
+        #   accessModes:
+        #     - ReadWriteOnce
+        #   resources:
+        #     requests:
+        #       storage: 40Gi
+        #   storageClassName: manual-db
+        #   volumeMode: Filesystem
+
+      managed:
+        services:
+          disabledDefaultServices: ["ro", "r"]
+          additional:
+            - selectorType: rw
+              serviceTemplate:
+                metadata:
+                  name: "hazel-db-svc"
+                  labels:
+                    "istio.io/use-waypoint": "hazel-db-waypoint"
+
+      bootstrap:
+        initdb:
+          # if true, will do a normal initdb instead of restoring from backup
+          # Needs db-migratejob.yaml
+          enabled: true
+          dbName: app
+          dbOwner: user
+          postInitApplicationSQL:
+            - ALTER USER user REPLICATION;
+
+        recovery:
+          # this should be the same as the backup setup if restoring from the same backup object
+          destinationPath: db-backups-recovery
+          host: backups.hazel.localhost
+          port: 80
+          useSSL: false
+          barmanObjectName: s3-store-db-other
+          s3Credentials:
+            accessKeyId:
+              name: s3-backups
+              key: username
+            secretAccessKey:
+              name: s3-backups
+              key: password
+
+      walArchive:
+        enabled: false
         barmanObjectName: s3-store-db
 
-    walArchive:
-      enabled: true
-      barmanObjectName: s3-store-db
+      enableSuperuserAccess: true
+      extraRoles: {}
+      #   - name: user
+      #     ensure: present
+      #     comment: "normal user for hazel application"
+      #     login: true
+      #     superuser: true
+      #     createdb: true
+      #     createrole: true
+      #     replication: true
+      #     bypassrls: true
+      #     passwordSecret:
+      #       name: hazel-db-credentials
 
-    extraRoles: []
-      # example:
-      # - name: notes
-      #   ensure: present
-      #   comment: "hazel Application User"
-      #   login: true
-      #   createdb: true
-      #   createrole: false
-      #   replication: false
-      #   bypassrls: false
-      #   passwordSecret:
-      #     name: mya-db-credentials
+  # db:
+  #   enabled: true
+  #   backups:
+  #     enabled: true
+  #     schedule: "0 30 2 * * *"  # At 02:30:00 (UTC) every day
+  #     retention: 7d          # keep 7 backups
+  #     barmanObjectName: s3-store-db
+  #     destinationPath: "hazel-db-backups"
+  #     host: backups.hazel.localhost
+  #     port: 80
+  #     useSSL: false
+  #     walCompression: bzip2  # bzip2;gzip;lz4;snappy;xz;zstd
+  #     dataCompression: bzip2  # bzip2;gzip;snappy
+  #     s3Credentials:
+  #       accessKeyId:
+  #         name: s3-backups
+  #         key: username
+  #       secretAccessKey:
+  #         name: s3-backups
+  #         key: password
+
+  #   cluster:
+  #     enabled: true
+  #     name: db-cluster
+  #     instances: 1
+  #     image:
+  #       repository: "ghcr.io/cloudnative-pg/postgresql"
+  #       tag: "18-minimal-trixie"
+  #       pullPolicy: IfNotPresent
+  #     superuser:
+  #       credentials: db-super-credentials
+  #     user:
+  #       credentials: hazel-db-credentials
+  #     storage:
+  #       size: 5Gi
+
+  #     managed:
+  #       services:
+  #         disabledDefaultServices: ["ro", "r"]
+
+  #     # To bootstrap a new database (needs init afterwards)
+  #     bootstrap:
+  #       enabled: true
+  #       dbName: app
+  #       dbOwner: user
+  #       postInitApplicationSQL:
+  #         - ALTER USER user REPLICATION;
+
+  #       recovery:
+  #         # To restore from a backup
+  #         # backupSource: true
+  #         barmanObjectName: s3-store-db
+
+  #     walArchive:
+  #       enabled: true
+  #       barmanObjectName: s3-store-db
+
+  #     extraRoles: []
+  #       # example:
+  #       # - name: notes
+  #       #   ensure: present
+  #       #   comment: "hazel Application User"
+  #       #   login: true
+  #       #   createdb: true
+  #       #   createrole: false
+  #       #   replication: false
+  #       #   bypassrls: false
+  #       #   passwordSecret:
+  #       #     name: mya-db-credentials
 
 minio:
   enabled: false
@@ -206,6 +311,6 @@ redis:
   externalConfig:
     enabled: true
   redisStandalone:
-    name: redis  # apparently MUST be set or it will default to the release name
+    name: kv  # apparently MUST be set or it will default to the release name
     tag: "v7.4.8"
     # tag: "v8.4.2"

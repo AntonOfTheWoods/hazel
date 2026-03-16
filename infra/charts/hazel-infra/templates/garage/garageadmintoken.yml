@@ -1,0 +1,13 @@
+apiVersion: garage.rajsingh.info/v1alpha1
+kind: GarageAdminToken
+metadata:
+  name: admin-full
+spec:
+  clusterRef:
+    name: garage
+  name: Full Admin Token
+  neverExpires: true
+  secretTemplate:
+    name: garage-admin-full
+    tokenKey: admin-token
+    includeEndpoint: true
