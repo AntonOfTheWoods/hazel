@@ -3,25 +3,17 @@ SPDX-License-Identifier: APACHE-2.0
 */}}
 
 {{/*
-Return the proper hazel image name
-*/}}
-{{- define "hazel.web.image" -}}
-{{ include "common.images.image" (dict "imageRoot" .Values.web.image "global" .Values.global) }}
-{{- end -}}
-
-{{/*
 Return the proper Docker Image Registry Secret Names
 */}}
 {{- define "hazel.imagePullSecrets" -}}
-{{- include "common.images.renderPullSecrets" (dict "images" (list .Values.web.image) "context" $) -}}
+{{- $appConfigs := default (dict) .Values.apps.config -}}
+{{- $images := list -}}
+{{- range $appKey, $appConfig := $appConfigs -}}
+{{- if and $appConfig (hasKey $appConfig "image") -}}
+{{- $images = append $images $appConfig.image -}}
 {{- end -}}
-
-{{/*
-Create a default fully qualified name for hazel web component.
-We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
-*/}}
-{{- define "hazel.web.fullname" -}}
-{{- printf "%s-web" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- include "common.images.renderPullSecrets" (dict "images" $images "context" $) -}}
 {{- end -}}
 
 {{/*

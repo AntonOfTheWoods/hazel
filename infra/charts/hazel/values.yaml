@@ -108,59 +108,268 @@ apps:
     failOnUnknownAppInGenericLists: true
 
   defaults:
+    ## @param apps.defaults.enabled Enable app by default for keys listed under apps.generic.*
+    ##
     enabled: true
+    ## @param apps.defaults.replicaCount Number of replicas to deploy
+    ##
     replicaCount: 1
+    ## @param apps.defaults.automountServiceAccountToken Mount Service Account token in app pods
+    ##
     automountServiceAccountToken: false
+    ## @param apps.defaults.podLabels Extra labels for app pods
+    ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+    ## e.g:
+    ## podLabels:
+    ##   tier: frontend
+    ##   team: platform
+    ##
     podLabels: {}
+    ## @param apps.defaults.podAnnotations Annotations for app pods
+    ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+    ## e.g:
+    ## podAnnotations:
+    ##   prometheus.io/scrape: "true"
+    ##   prometheus.io/port: "8080"
+    ##
     podAnnotations: {}
+    ## @param apps.defaults.podAffinityPreset Pod affinity preset. Ignored if `apps.defaults.affinity` is set. Allowed values: `soft` or `hard`
+    ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+    ##
     podAffinityPreset: ""
+    ## @param apps.defaults.podAntiAffinityPreset Pod anti-affinity preset. Ignored if `apps.defaults.affinity` is set. Allowed values: `soft` or `hard`
+    ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+    ##
     podAntiAffinityPreset: soft
+    ## Node affinity preset
+    ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
+    ##
     nodeAffinityPreset:
+      ## @param apps.defaults.nodeAffinityPreset.type Node affinity preset type. Ignored if `apps.defaults.affinity` is set. Allowed values: `soft` or `hard`
+      ##
       type: ""
+      ## @param apps.defaults.nodeAffinityPreset.key Node label key to match. Ignored if `apps.defaults.affinity` is set
+      ##
       key: ""
+      ## @param apps.defaults.nodeAffinityPreset.values Node label values to match. Ignored if `apps.defaults.affinity` is set
+      ## e.g:
+      ## values:
+      ##   - e2e-az1
+      ##   - e2e-az2
+      ##
       values: []
+    ## @param apps.defaults.affinity Affinity for app pods assignment
+    ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+    ## NOTE: apps.defaults.podAffinityPreset, apps.defaults.podAntiAffinityPreset, and apps.defaults.nodeAffinityPreset are ignored when set
+    ## e.g:
+    ## affinity:
+    ##   nodeAffinity:
+    ##     requiredDuringSchedulingIgnoredDuringExecution:
+    ##       nodeSelectorTerms:
+    ##         - matchExpressions:
+    ##             - key: kubernetes.io/os
+    ##               operator: In
+    ##               values: [linux]
+    ##
     affinity: {}
+    ## @param apps.defaults.nodeSelector Node labels for app pods assignment
+    ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
+    ## e.g:
+    ## nodeSelector:
+    ##   kubernetes.io/arch: amd64
+    ##
     nodeSelector: {}
+    ## @param apps.defaults.tolerations Tolerations for app pods assignment
+    ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+    ## e.g:
+    ## tolerations:
+    ##   - key: dedicated
+    ##     operator: Equal
+    ##     value: backend
+    ##     effect: NoSchedule
+    ##
     tolerations: []
+    ## @param apps.defaults.priorityClassName App pods priorityClassName
+    ##
     priorityClassName: ""
+    ## @param apps.defaults.schedulerName Name of the Kubernetes scheduler (other than default)
+    ##
     schedulerName: ""
+    ## @param apps.defaults.topologySpreadConstraints Topology spread constraints for pods
+    ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+    ## e.g:
+    ## topologySpreadConstraints:
+    ##   - maxSkew: 1
+    ##     topologyKey: kubernetes.io/hostname
+    ##     whenUnsatisfiable: ScheduleAnyway
+    ##     labelSelector:
+    ##       matchLabels:
+    ##         app.kubernetes.io/part-of: hazel
+    ##
     topologySpreadConstraints: []
+    ## Configure Pods Security Context
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+    ##
     podSecurityContext:
+      ## @param apps.defaults.podSecurityContext.enabled Enable pods' Security Context
+      ##
       enabled: true
+      ## @param apps.defaults.podSecurityContext.fsGroupChangePolicy Set filesystem group change policy for pods
+      ##
       fsGroupChangePolicy: Always
+      ## @param apps.defaults.podSecurityContext.sysctls Set kernel settings using sysctl interface
+      ## e.g:
+      ## sysctls:
+      ##   - name: net.core.somaxconn
+      ##     value: "1024"
+      ##
       sysctls: []
+      ## @param apps.defaults.podSecurityContext.supplementalGroups Set filesystem extra groups
+      ## e.g:
+      ## supplementalGroups: [1001, 1002]
+      ##
       supplementalGroups: []
+      ## @param apps.defaults.podSecurityContext.fsGroup Set fsGroup in pods' Security Context
+      ##
       fsGroup: 1001
+    ## Configure Container Security Context
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+    ##
     containerSecurityContext:
+      ## @param apps.defaults.containerSecurityContext.enabled Enable container Security Context
+      ##
       enabled: true
+      ## @param apps.defaults.containerSecurityContext.seLinuxOptions Set SELinux options
+      ## e.g:
+      ## seLinuxOptions:
+      ##   level: "s0:c123,c456"
+      ##
       seLinuxOptions: {}
+      ## @param apps.defaults.containerSecurityContext.runAsUser Set runAsUser
+      ##
       runAsUser: 1001
+      ## @param apps.defaults.containerSecurityContext.runAsGroup Set runAsGroup
+      ##
       runAsGroup: 1001
+      ## @param apps.defaults.containerSecurityContext.runAsNonRoot Set runAsNonRoot
+      ##
       runAsNonRoot: true
+      ## @param apps.defaults.containerSecurityContext.readOnlyRootFilesystem Set readOnlyRootFilesystem
+      ##
       readOnlyRootFilesystem: false
+      ## @param apps.defaults.containerSecurityContext.privileged Set privileged
+      ##
       privileged: false
+      ## @param apps.defaults.containerSecurityContext.allowPrivilegeEscalation Set allowPrivilegeEscalation
+      ##
       allowPrivilegeEscalation: false
+      ## @param apps.defaults.containerSecurityContext.capabilities.drop List of capabilities to drop
+      ##
       capabilities:
         drop: ["ALL"]
+      ## @param apps.defaults.containerSecurityContext.seccompProfile.type Set seccomp profile
+      ##
       seccompProfile:
         type: "RuntimeDefault"
+    ## @param apps.defaults.command Override default container command (useful when using custom images)
+    ## e.g:
+    ## command: ["/bin/sh", "-c"]
+    ##
     command: []
+    ## @param apps.defaults.args Override default container args (useful when using custom images)
+    ## e.g:
+    ## args: ["node server.js"]
+    ##
     args: []
+    ## @param apps.defaults.lifecycleHooks Lifecycle hooks for app containers
+    ## e.g:
+    ## lifecycleHooks:
+    ##   preStop:
+    ##     exec:
+    ##       command: ["/bin/sh", "-c", "sleep 5"]
+    ##
     lifecycleHooks: {}
+    ## @param apps.defaults.resourcesPreset Set container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge)
+    ## This is ignored if apps.defaults.resources is set.
+    ##
     resourcesPreset: "none"
+    ## @param apps.defaults.resources Set container requests/limits for CPU/memory
+    ## Example:
+    ## resources:
+    ##   requests:
+    ##     cpu: 200m
+    ##     memory: 256Mi
+    ##   limits:
+    ##     cpu: 500m
+    ##     memory: 512Mi
+    ##
     resources: {}
+    ## @param apps.defaults.terminationGracePeriodSeconds Seconds pods need to terminate gracefully
+    ##
     terminationGracePeriodSeconds: ""
+    ## @param apps.defaults.role Default role string exposed via hazel_ROLE env var
+    ##
     role: webserver
+    ## @param apps.defaults.portEnvVarName Default port env var name
+    ##
     portEnvVarName: hazel_WEBSERVER_PORT_NUMBER
+    ## @param apps.defaults.containerPorts.http HTTP container port
+    ##
     containerPorts:
       http: 8080
+    ## @param apps.defaults.extraEnvVars Array with extra environment variables
+    ## e.g:
+    ## extraEnvVars:
+    ##   - name: FOO
+    ##     value: "bar"
+    ##   - name: FEATURE_FLAG
+    ##     value: "true"
+    ##
     extraEnvVars: []
+    ## @param apps.defaults.extraEnvVarsCM Name of existing ConfigMap containing extra env vars
+    ##
     extraEnvVarsCM: ""
+    ## @param apps.defaults.extraEnvVarsSecret Name of existing Secret containing extra env vars
+    ##
     extraEnvVarsSecret: ""
+    ## @param apps.defaults.extraVolumes Optionally specify additional pod volumes
+    ## e.g:
+    ## extraVolumes:
+    ##   - name: app-cache
+    ##     emptyDir: {}
+    ##
     extraVolumes: []
+    ## @param apps.defaults.extraVolumeMounts Optionally specify additional container volumeMounts
+    ## e.g:
+    ## extraVolumeMounts:
+    ##   - name: app-cache
+    ##     mountPath: /var/cache/app
+    ##
     extraVolumeMounts: []
+    ## @param apps.defaults.sidecars Additional sidecar containers for pods
+    ## e.g:
+    ## sidecars:
+    ##   - name: log-shipper
+    ##     image: busybox:1.36
+    ##     command: ["/bin/sh", "-c", "tail -f /var/log/app.log"]
+    ##
     sidecars: []
+    ## @param apps.defaults.initContainers Additional init containers for pods
+    ## e.g:
+    ## initContainers:
+    ##   - name: init-permissions
+    ##     image: busybox:1.36
+    ##     command: ["sh", "-c", "chown -R 1001:1001 /data"]
+    ##
     initContainers: []
+    ## Configure liveness probe
+    ## @param apps.defaults.livenessProbe.enabled Enable livenessProbe
+    ## @param apps.defaults.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+    ## @param apps.defaults.livenessProbe.periodSeconds Period seconds for livenessProbe
+    ## @param apps.defaults.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+    ## @param apps.defaults.livenessProbe.failureThreshold Failure threshold for livenessProbe
+    ## @param apps.defaults.livenessProbe.successThreshold Success threshold for livenessProbe
+    ##
     livenessProbe:
       enabled: false
       initialDelaySeconds: 15
@@ -168,6 +377,14 @@ apps:
       timeoutSeconds: 1
       failureThreshold: 3
       successThreshold: 1
+    ## Configure readiness probe
+    ## @param apps.defaults.readinessProbe.enabled Enable readinessProbe
+    ## @param apps.defaults.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+    ## @param apps.defaults.readinessProbe.periodSeconds Period seconds for readinessProbe
+    ## @param apps.defaults.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+    ## @param apps.defaults.readinessProbe.failureThreshold Failure threshold for readinessProbe
+    ## @param apps.defaults.readinessProbe.successThreshold Success threshold for readinessProbe
+    ##
     readinessProbe:
       enabled: true
       initialDelaySeconds: 15
@@ -175,6 +392,14 @@ apps:
       timeoutSeconds: 1
       failureThreshold: 3
       successThreshold: 1
+    ## Configure startup probe
+    ## @param apps.defaults.startupProbe.enabled Enable startupProbe
+    ## @param apps.defaults.startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
+    ## @param apps.defaults.startupProbe.periodSeconds Period seconds for startupProbe
+    ## @param apps.defaults.startupProbe.timeoutSeconds Timeout seconds for startupProbe
+    ## @param apps.defaults.startupProbe.failureThreshold Failure threshold for startupProbe
+    ## @param apps.defaults.startupProbe.successThreshold Success threshold for startupProbe
+    ##
     startupProbe:
       enabled: false
       initialDelaySeconds: 15
@@ -182,51 +407,209 @@ apps:
       timeoutSeconds: 1
       failureThreshold: 60
       successThreshold: 1
+    ## @param apps.defaults.customLivenessProbe Custom livenessProbe that overrides the default
+    ## e.g:
+    ## customLivenessProbe:
+    ##   httpGet:
+    ##     path: /livez
+    ##     port: http
+    ##   initialDelaySeconds: 10
+    ##   periodSeconds: 10
+    ##
     customLivenessProbe: {}
+    ## @param apps.defaults.customReadinessProbe Custom readinessProbe that overrides the default
+    ## e.g:
+    ## customReadinessProbe:
+    ##   httpGet:
+    ##     path: /readyz
+    ##     port: http
+    ##   initialDelaySeconds: 5
+    ##   periodSeconds: 5
+    ##
     customReadinessProbe: {}
+    ## @param apps.defaults.customStartupProbe Custom startupProbe that overrides the default
+    ## e.g:
+    ## customStartupProbe:
+    ##   httpGet:
+    ##     path: /startupz
+    ##     port: http
+    ##   failureThreshold: 60
+    ##   periodSeconds: 5
+    ##
     customStartupProbe: {}
+    ## Pod Disruption Budget configuration
+    ## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb
+    ##
     pdb:
+      ## @param apps.defaults.pdb.create Enable/disable PodDisruptionBudget creation
+      ##
       create: false
+      ## @param apps.defaults.pdb.minAvailable Minimum number/percentage of pods that should remain scheduled
+      ## e.g: 1, "50%"
+      ##
       minAvailable: 1
+      ## @param apps.defaults.pdb.maxUnavailable Maximum number/percentage of pods that may be unavailable
+      ## e.g: 1, "25%"
+      ##
       maxUnavailable: ""
+    ## Autoscaling configuration
+    ## ref: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+    ##
     autoscaling:
       hpa:
+        ## @param apps.defaults.autoscaling.hpa.enabled Enable HPA
+        ##
         enabled: false
+        ## @param apps.defaults.autoscaling.hpa.minReplicas Minimum number of replicas
+        ##
         minReplicas: ""
+        ## @param apps.defaults.autoscaling.hpa.maxReplicas Maximum number of replicas
+        ##
         maxReplicas: ""
+        ## @param apps.defaults.autoscaling.hpa.targetCPU Target CPU utilization percentage
+        ##
         targetCPU: ""
+        ## @param apps.defaults.autoscaling.hpa.targetMemory Target memory utilization percentage
+        ##
         targetMemory: ""
       vpa:
+        ## @param apps.defaults.autoscaling.vpa.enabled Enable VPA
+        ##
         enabled: false
+        ## @param apps.defaults.autoscaling.vpa.annotations Annotations for VPA resource
+        ## e.g:
+        ## annotations:
+        ##   goldilocks.fairwinds.com/enabled: "true"
+        ##
         annotations: {}
+        ## @param apps.defaults.autoscaling.vpa.controlledResources VPA resources that the autoscaler can control
+        ## e.g: ["cpu", "memory"]
+        ##
         controlledResources: []
+        ## @param apps.defaults.autoscaling.vpa.maxAllowed VPA max allowed resources for the pod
+        ## e.g:
+        ## maxAllowed:
+        ##   cpu: "2"
+        ##   memory: 2Gi
+        ##
         maxAllowed: {}
+        ## @param apps.defaults.autoscaling.vpa.minAllowed VPA min allowed resources for the pod
+        ## e.g:
+        ## minAllowed:
+        ##   cpu: 100m
+        ##   memory: 128Mi
+        ##
         minAllowed: {}
+        ## VPA update policy
+        ##
         updatePolicy:
+          ## @param apps.defaults.autoscaling.vpa.updatePolicy.updateMode VPA update policy mode (Off, Initial, Recreate, Auto)
+          ##
           updateMode: Auto
+    ## Service parameters
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/
+    ##
     service:
+      ## @param apps.defaults.service.type Service type
+      ##
       type: ClusterIP
+      ## @param apps.defaults.service.ports.http HTTP service port
+      ##
       ports:
         http: 80
+      ## @param apps.defaults.service.nodePorts.http NodePort for HTTP (if NodePort/LoadBalancer)
+      ## NOTE: choose port between <30000-32767>
+      ##
       nodePorts:
         http: ""
+      ## @param apps.defaults.service.clusterIP Service ClusterIP
+      ## e.g: None
+      ##
       clusterIP: ""
+      ## @param apps.defaults.service.loadBalancerIP Service LoadBalancer IP
+      ##
       loadBalancerIP: ""
+      ## @param apps.defaults.service.loadBalancerSourceRanges Service LoadBalancer allowed source ranges
+      ## e.g:
+      ## loadBalancerSourceRanges:
+      ##   - 10.10.10.0/24
+      ##   - 192.168.0.0/16
+      ##
       loadBalancerSourceRanges: []
+      ## @param apps.defaults.service.externalTrafficPolicy Service external traffic policy
+      ##
       externalTrafficPolicy: Cluster
+      ## @param apps.defaults.service.annotations Service annotations
+      ##
       annotations: {}
+      ## @param apps.defaults.service.extraPorts Extra service ports
+      ##
       extraPorts: []
+      ## @param apps.defaults.service.sessionAffinity Session affinity mode
+      ##
       sessionAffinity: None
+      ## @param apps.defaults.service.sessionAffinityConfig Extra sessionAffinity settings
+      ## e.g:
+      ## sessionAffinityConfig:
+      ##   clientIP:
+      ##     timeoutSeconds: 300
+      ##
       sessionAffinityConfig: {}
+    ## Network Policies
+    ## Ref: https://kubernetes.io/docs/concepts/services-networking/network-policies/
+    ##
     networkPolicy:
+      ## @param apps.defaults.networkPolicy.enabled Specifies whether a NetworkPolicy should be created
+      ##
       enabled: true
+      ## @param apps.defaults.networkPolicy.allowExternal Allow connections from any source on matching destination ports
+      ##
       allowExternal: true
+      ## @param apps.defaults.networkPolicy.allowExternalEgress Allow egress to any destination/port
+      ##
       allowExternalEgress: true
+      ## @param apps.defaults.networkPolicy.addExternalClientAccess Allow pods with client label set to true
+      ##
       addExternalClientAccess: true
+      ## @param apps.defaults.networkPolicy.extraIngress Add extra ingress rules
+      ## e.g:
+      ## extraIngress:
+      ##   - ports:
+      ##       - port: 1234
+      ##     from:
+      ##       - podSelector:
+      ##           matchLabels:
+      ##             role: frontend
+      ##
       extraIngress: []
+      ## @param apps.defaults.networkPolicy.extraEgress Add extra egress rules
+      ## e.g:
+      ## extraEgress:
+      ##   - ports:
+      ##       - port: 1234
+      ##     to:
+      ##       - podSelector:
+      ##           matchLabels:
+      ##             role: backend
+      ##
       extraEgress: []
+      ## @param apps.defaults.networkPolicy.ingressPodMatchLabels Pod labels to allow ingress from
+      ## e.g:
+      ## ingressPodMatchLabels:
+      ##   my-client: "true"
+      ##
       ingressPodMatchLabels: {}
+      ## @param apps.defaults.networkPolicy.ingressNSMatchLabels Namespace labels to allow ingress from
+      ## e.g:
+      ## ingressNSMatchLabels:
+      ##   kubernetes.io/metadata.name: ingress
+      ##
       ingressNSMatchLabels: {}
+      ## @param apps.defaults.networkPolicy.ingressNSPodMatchLabels Pod labels (within matched namespaces) to allow ingress from
+      ## e.g:
+      ## ingressNSPodMatchLabels:
+      ##   app: ingress-nginx
+      ##
       ingressNSPodMatchLabels: {}
 
   config:
@@ -265,507 +648,6 @@ apps:
         repository: ghcr.io/hazelchat/hazel-bot-gateway
         tag: "1.0.1"
         pullPolicy: IfNotPresent
-
-## hazel Webserver
-##
-web:
-  enabled: false
-  localRoutes:
-    - name: root
-      path: /
-      # suppressPath: false
-      port: 8000
-
-  image:
-    repository: ghcr.io/hazelchat/hazel-web
-    tag: "1.0.1"
-    pullPolicy: IfNotPresent
-    pullSecrets: []
-
-  # application:
-  #   name: web
-  #   port: 8000
-  # service:
-  #   name: web
-  #   port: 8000
-
-  ingress:
-    profileUpload:
-      maxRequestBodyBytes: 1048576  # 1MB
-      memRequestBodyBytes: 1048576
-      maxResponseBodyBytes: 0
-    default:
-      maxRequestBodyBytes: 4194304  # 4MB
-      memRequestBodyBytes: 4194304
-      maxResponseBodyBytes: 0
-
-
-  ## @param web.replicaCount Number of hazel webserver replicas to deploy
-  ##
-  replicaCount: 1
-  ## @param web.containerPorts.http hazel webserver HTTP container port
-  ##
-  containerPorts:
-    http: 8080
-  ## @param web.extraContainerPorts Optionally specify extra list of additional ports for WordPress container(s)
-  ## e.g:
-  ## extraContainerPorts:
-  ##   - name: myservice
-  ##     containerPort: 9090
-  ##
-  extraContainerPorts: []
-  ## Configure extra options for hazel webserver containers' liveness and readiness probes
-  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-  ## @param web.livenessProbe.enabled Enable livenessProbe on hazel webserver containers
-  ## @param web.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
-  ## @param web.livenessProbe.periodSeconds Period seconds for livenessProbe
-  ## @param web.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
-  ## @param web.livenessProbe.failureThreshold Failure threshold for livenessProbe
-  ## @param web.livenessProbe.successThreshold Success threshold for livenessProbe
-  ##
-  livenessProbe:
-    enabled: false
-    initialDelaySeconds: 15
-    periodSeconds: 15
-    timeoutSeconds: 1
-    failureThreshold: 3
-    successThreshold: 1
-  ## @param web.readinessProbe.enabled Enable readinessProbe on hazel webserver containers
-  ## @param web.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
-  ## @param web.readinessProbe.periodSeconds Period seconds for readinessProbe
-  ## @param web.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
-  ## @param web.readinessProbe.failureThreshold Failure threshold for readinessProbe
-  ## @param web.readinessProbe.successThreshold Success threshold for readinessProbe
-  ##
-  readinessProbe:
-    enabled: true
-    initialDelaySeconds: 15
-    periodSeconds: 15
-    timeoutSeconds: 1
-    failureThreshold: 3
-    successThreshold: 1
-  ## @param web.startupProbe.enabled Enable startupProbe on hazel webserver containers
-  ## @param web.startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
-  ## @param web.startupProbe.periodSeconds Period seconds for startupProbe
-  ## @param web.startupProbe.timeoutSeconds Timeout seconds for startupProbe
-  ## @param web.startupProbe.failureThreshold Failure threshold for startupProbe
-  ## @param web.startupProbe.successThreshold Success threshold for startupProbe
-  ##
-  startupProbe:
-    enabled: false
-    initialDelaySeconds: 15
-    periodSeconds: 5
-    timeoutSeconds: 1
-    failureThreshold: 60
-    successThreshold: 1
-  ## @param web.customLivenessProbe Custom livenessProbe that overrides the default one
-  ##
-  customLivenessProbe: {}
-  ## @param web.customReadinessProbe Custom readinessProbe that overrides the default one
-  ##
-  customReadinessProbe: {}
-  ## @param web.customStartupProbe Custom startupProbe that overrides the default one
-  ##
-  customStartupProbe: {}
-  ## hazel webserver resource requests and limits
-  ## ref: http://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
-  ## @param web.resourcesPreset Set hazel webserver container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if web.resources is set (web.resources is recommended for production).
-  ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
-  ##
-  resourcesPreset: "none"
-  ## @param web.resources Set hazel webserver container requests and limits for different resources like CPU or memory (essential for production workloads)
-  ## Example:
-  ## resources:
-  ##   requests:
-  ##     cpu: 2
-  ##     memory: 512Mi
-  ##   limits:
-  ##     cpu: 3
-  ##     memory: 1024Mi
-  ##
-  resources: {}
-  ## Configure Pods Security Context
-  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
-  ## @param web.podSecurityContext.enabled Enable hazel webserver pods' Security Context
-  ## @param web.podSecurityContext.fsGroupChangePolicy Set filesystem group change policy for hazel webserver pods
-  ## @param web.podSecurityContext.sysctls Set kernel settings using the sysctl interface for hazel webserver pods
-  ## @param web.podSecurityContext.supplementalGroups Set filesystem extra groups for hazel webserver pods
-  ## @param web.podSecurityContext.fsGroup Set fsGroup in hazel webserver pods' Security Context
-  ##
-  podSecurityContext:
-    enabled: true
-    fsGroupChangePolicy: Always
-    sysctls: []
-    supplementalGroups: []
-    fsGroup: 1001
-  ## Configure Container Security Context
-  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
-  ## @param web.containerSecurityContext.enabled Enabled hazel webserver container' Security Context
-  ## @param web.containerSecurityContext.seLinuxOptions [object,nullable] Set SELinux options in hazel webserver container
-  ## @param web.containerSecurityContext.runAsUser Set runAsUser in hazel webserver container' Security Context
-  ## @param web.containerSecurityContext.runAsGroup Set runAsGroup in hazel webserver container' Security Context
-  ## @param web.containerSecurityContext.runAsNonRoot Set runAsNonRoot in hazel webserver container' Security Context
-  ## @param web.containerSecurityContext.readOnlyRootFilesystem Set readOnlyRootFilesystem in hazel webserver container' Security Context
-  ## @param web.containerSecurityContext.privileged Set privileged in hazel webserver container' Security Context
-  ## @param web.containerSecurityContext.allowPrivilegeEscalation Set allowPrivilegeEscalation in hazel webserver container' Security Context
-  ## @param web.containerSecurityContext.capabilities.drop List of capabilities to be dropped in hazel webserver container
-  ## @param web.containerSecurityContext.seccompProfile.type Set seccomp profile in hazel webserver container
-  ##
-  containerSecurityContext:
-    enabled: true
-    seLinuxOptions: {}
-    runAsUser: 1001
-    runAsGroup: 1001
-    runAsNonRoot: true
-    readOnlyRootFilesystem: false
-    privileged: false
-    allowPrivilegeEscalation: false
-    capabilities:
-      drop: ["ALL"]
-    seccompProfile:
-      type: "RuntimeDefault"
-  ## @param web.command Override default hazel webserver container command (useful when using custom images)
-  ##
-  command: []
-  ## @param web.args Override default hazel webserver container args (useful when using custom images)
-  ##
-  args: []
-  ## @param web.automountServiceAccountToken Mount Service Account token in hazel webserver pods
-  ##
-  automountServiceAccountToken: false
-  ## @param web.hostAliases hazel webserver pods host aliases
-  ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
-  ##
-  hostAliases: []
-  ## @param web.deploymentAnnotations Annotations for hazel webserver deployment
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-  ##
-  deploymentAnnotations: {}
-  ## @param web.podLabels Extra labels for hazel webserver pods
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
-  ##
-  podLabels: {}
-  ## @param web.podAnnotations Annotations for hazel webserver pods
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-  ##
-  podAnnotations: {}
-  ## @param web.podAffinityPreset Pod affinity preset. Ignored if `web.affinity` is set. Allowed values: `soft` or `hard`
-  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
-  ##
-  podAffinityPreset: ""
-  ## @param web.podAntiAffinityPreset Pod anti-affinity preset. Ignored if `web.affinity` is set. Allowed values: `soft` or `hard`
-  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
-  ##
-  podAntiAffinityPreset: soft
-  ## Node web.affinity preset
-  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
-  ##
-  nodeAffinityPreset:
-    ## @param web.nodeAffinityPreset.type Node affinity preset type. Ignored if `web.affinity` is set. Allowed values: `soft` or `hard`
-    ##
-    type: ""
-    ## @param web.nodeAffinityPreset.key Node label key to match. Ignored if `web.affinity` is set
-    ##
-    key: ""
-    ## @param web.nodeAffinityPreset.values Node label values to match. Ignored if `web.affinity` is set
-    ## E.g.
-    ## values:
-    ##   - e2e-az1
-    ##   - e2e-az2
-    ##
-    values: []
-  ## @param web.affinity Affinity for hazel webserver pods assignment
-  ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
-  ## NOTE: `web.podAffinityPreset`, `web.podAntiAffinityPreset`, and `web.nodeAffinityPreset` will be ignored when it's set
-  ##
-  affinity: {}
-  ## @param web.nodeSelector Node labels for hazel webserver pods assignment
-  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
-  ##
-  nodeSelector: {}
-  ## @param web.tolerations Tolerations for hazel webserver pods assignment
-  ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-  ##
-  tolerations: []
-  ## @param web.updateStrategy.type hazel webserver deployment strategy type
-  ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
-  ##
-  updateStrategy:
-    ## Can be set to RollingUpdate or Recreate
-    ##
-    type: RollingUpdate
-  ## @param web.priorityClassName hazel webserver pods' priorityClassName
-  ##
-  priorityClassName: ""
-  ## @param web.topologySpreadConstraints Topology Spread Constraints for hazel webserver pod assignment spread across your cluster among failure-domains
-  ## Ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/#spread-constraints-for-pods
-  ##
-  topologySpreadConstraints: []
-  ## @param web.schedulerName Name of the k8s scheduler (other than default) for hazel webserver pods
-  ## ref: https://kubernetes.io/docs/tasks/administer-cluster/configure-multiple-schedulers/
-  ##
-  schedulerName: ""
-  ## @param web.terminationGracePeriodSeconds Seconds hazel webserver pods need to terminate gracefully
-  ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod/#termination-of-pods
-  ##
-  terminationGracePeriodSeconds: ""
-  ## @param web.lifecycleHooks for hazel webserver containers to automate configuration before or after startup
-  ##
-  lifecycleHooks: {}
-  ## @param web.extraEnvVars Array with extra environment variables to add to hazel webserver containers
-  ## e.g:
-  ## extraEnvVars:
-  ##   - name: FOO
-  ##     value: "bar"
-  ##
-  extraEnvVars: []
-  ## @param web.extraEnvVarsCM Name of existing ConfigMap containing extra env vars for hazel webserver containers
-  ##
-  extraEnvVarsCM: ""
-  ## @param web.extraEnvVarsSecret Name of existing Secret containing extra env vars for hazel webserver containers
-  ##
-  extraEnvVarsSecret: ""
-  ## @param web.extraVolumes Optionally specify extra list of additional volumes for the hazel webserver pods
-  ##
-  extraVolumes: []
-  ## @param web.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the hazel webserver containers
-  ##
-  extraVolumeMounts: []
-  ## @param web.sidecars Add additional sidecar containers to the hazel webserver pods
-  ## e.g:
-  ## sidecars:
-  ##   - name: your-image-name
-  ##     image: your-image
-  ##     imagePullPolicy: Always
-  ##     ports:
-  ##       - name: portname
-  ##         containerPort: 1234
-  ##
-  sidecars: []
-  ## @param web.initContainers Add additional init containers to the hazel webserver pods
-  ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
-  ## e.g:
-  ## initContainers:
-  ##  - name: your-image-name
-  ##    image: your-image
-  ##    imagePullPolicy: Always
-  ##    command: ['sh', '-c', 'echo "hello world"']
-  ##
-  initContainers: []
-  ## Pod Disruption Budget configuration
-  ## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb
-  ## @param web.pdb.create Enable/disable a Pod Disruption Budget creation
-  ## @param web.pdb.minAvailable Minimum number/percentage of pods that should remain scheduled
-  ## @param web.pdb.maxUnavailable Maximum number/percentage of pods that may be made unavailable
-  ##
-  pdb:
-    create: false
-    minAvailable: 1
-    maxUnavailable: ""
-  ## Autoscaling configuration
-  ## ref: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
-  autoscaling:
-    vpa:
-      ## @param web.autoscaling.vpa.enabled Enable VPA
-      ##
-      enabled: false
-      ## @param web.autoscaling.vpa.annotations Annotations for VPA resource
-      ##
-      annotations: {}
-      ## @param web.autoscaling.vpa.controlledResources VPA List of resources that the vertical pod autoscaler can control. Defaults to cpu and memory
-      ##
-      controlledResources: []
-      ## @param web.autoscaling.vpa.maxAllowed VPA Max allowed resources for the pod
-      ## cpu: 200m
-      ## memory: 100Mi
-      maxAllowed: {}
-      ## @param web.autoscaling.vpa.minAllowed VPA Min allowed resources for the pod
-      ## cpu: 200m
-      ## memory: 100Mi
-      minAllowed: {}
-      ## VPA update policy
-      ##
-      updatePolicy:
-        ## @param web.autoscaling.vpa.updatePolicy.updateMode Autoscaling update policy Specifies whether recommended updates are applied when a Pod is started and whether recommended updates are applied during the life of a Pod
-        ## Possible values are "Off", "Initial", "Recreate", and "Auto".
-        ##
-        updateMode: Auto
-    hpa:
-      ## @param web.autoscaling.hpa.enabled Enable HPA
-      ##
-      enabled: false
-      ## @param web.autoscaling.hpa.minReplicas Minimum number of replicas
-      ##
-      minReplicas: ""
-      ## @param web.autoscaling.hpa.maxReplicas Maximum number of replicas
-      ##
-      maxReplicas: ""
-      ## @param web.autoscaling.hpa.targetCPU Target CPU utilization percentage
-      ##
-      targetCPU: ""
-      ## @param web.autoscaling.hpa.targetMemory Target Memory utilization percentage
-      ##
-      targetMemory: ""
-
-  ## hazel webserver service parameters
-  ##
-  service:
-    ## @param web.service.type hazel webserver service type
-    ##
-    type: LoadBalancer
-    ## @param web.service.ports.http hazel webserver service HTTP port
-    ##
-    ports:
-      http: 80
-    ## Node ports to expose
-    ## @param web.service.nodePorts.http Node port for HTTP
-    ## NOTE: choose port between <30000-32767>
-    ##
-    nodePorts:
-      http: ""
-    ## @param web.service.clusterIP hazel webserver service Cluster IP
-    ## e.g.:
-    ## clusterIP: None
-    ##
-    clusterIP: ""
-    ## @param web.service.loadBalancerIP hazel webserver service Load Balancer IP
-    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer
-    ##
-    loadBalancerIP: ""
-    ## @param web.service.loadBalancerSourceRanges hazel webserver service Load Balancer sources
-    ## ref: https://kubernetes.io/docs/tasks/access-application-cluster/configure-cloud-provider-firewall/#restrict-access-for-loadbalancer-service
-    ## e.g:
-    ## loadBalancerSourceRanges:
-    ##   - 10.10.10.0/24
-    ##
-    loadBalancerSourceRanges: []
-    ## @param web.service.externalTrafficPolicy hazel webserver service external traffic policy
-    ## ref http://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
-    ##
-    externalTrafficPolicy: Cluster
-    ## @param web.service.annotations Additional custom annotations for hazel webserver service
-    ##
-    annotations: {}
-    ## @param web.service.extraPorts Extra ports to expose in hazel webserver service (normally used with the `sidecars` value)
-    ##
-    extraPorts: []
-    ## @param web.service.sessionAffinity Control where client requests go, to the same pod or round-robin
-    ## Values: ClientIP or None
-    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/
-    ##
-    sessionAffinity: None
-    ## @param web.service.sessionAffinityConfig Additional settings for the sessionAffinity
-    ## sessionAffinityConfig:
-    ##   clientIP:
-    ##     timeoutSeconds: 300
-    ##
-    sessionAffinityConfig: {}
-  ## Network Policies
-  ## Ref: https://kubernetes.io/docs/concepts/services-networking/network-policies/
-  ##
-  networkPolicy:
-    ## @param web.networkPolicy.enabled Specifies whether a NetworkPolicy should be created
-    ##
-    enabled: true
-    ## @param web.networkPolicy.allowExternal Don't require server label for connections
-    ## The Policy model to apply. When set to false, only pods with the correct
-    ## server label will have network access to the ports server is listening
-    ## on. When true, server will accept connections from any source
-    ## (with the correct destination port).
-    ##
-    allowExternal: true
-    ## @param web.networkPolicy.allowExternalEgress Allow the pod to access any range of port and all destinations.
-    ##
-    allowExternalEgress: true
-    ## @param web.networkPolicy.addExternalClientAccess Allow access from pods with client label set to "true". Ignored if `networkPolicy.allowExternal` is true.
-    ##
-    addExternalClientAccess: true
-    ## @param web.networkPolicy.extraIngress [array] Add extra ingress rules to the NetworkPolicy
-    ## e.g:
-    ## extraIngress:
-    ##   - ports:
-    ##       - port: 1234
-    ##     from:
-    ##       - podSelector:
-    ##           - matchLabels:
-    ##               - role: frontend
-    ##       - podSelector:
-    ##           - matchExpressions:
-    ##               - key: role
-    ##                 operator: In
-    ##                 values:
-    ##                   - frontend
-    extraIngress: []
-    ## @param web.networkPolicy.extraEgress [array] Add extra ingress rules to the NetworkPolicy (ignored if allowExternalEgress=true)
-    ## e.g:
-    ## extraEgress:
-    ##   - ports:
-    ##       - port: 1234
-    ##     to:
-    ##       - podSelector:
-    ##           - matchLabels:
-    ##               - role: frontend
-    ##       - podSelector:
-    ##           - matchExpressions:
-    ##               - key: role
-    ##                 operator: In
-    ##                 values:
-    ##                   - frontend
-    ##
-    extraEgress: []
-    ## @param web.networkPolicy.ingressPodMatchLabels [object] Labels to match to allow traffic from other pods. Ignored if `networkPolicy.allowExternal` is true.
-    ## e.g:
-    ## ingressPodMatchLabels:
-    ##   my-client: "true"
-    #
-    ingressPodMatchLabels: {}
-    ## @param web.networkPolicy.ingressNSMatchLabels [object] Labels to match to allow traffic from other namespaces
-    ## @param web.networkPolicy.ingressNSPodMatchLabels [object] Pod labels to match to allow traffic from other namespaces
-    ##
-    ingressNSMatchLabels: {}
-    ingressNSPodMatchLabels: {}
-
-# web:
-#   enabled: true
-#   localRoutes:
-#     - name: root
-#       path: /
-#       # suppressPath: false
-#       port: 8000
-#
-#   replicas: 1
-#   siteId: 1
-#
-#   application:
-#     name: web
-#     port: 8000
-#   service:
-#     name: web
-#     port: 8000
-#   ingress:
-#     profileUpload:
-#       maxRequestBodyBytes: 1048576  # 1MB
-#       memRequestBodyBytes: 1048576
-#       maxResponseBodyBytes: 0
-#     default:
-#       maxRequestBodyBytes: 4194304  # 4MB
-#       memRequestBodyBytes: 4194304
-#       maxResponseBodyBytes: 0
-#
-#   diagnosticMode:
-#     enabled: false
-#
-#   host: hazel.localhost
-#   existingTlsSecretName: ""  # if set, will use this TLS secret directly
-#   # should match one of the cert-manager issuers above if using builtin cert-manager
-#   tlsIssuerName: "letsencrypt-staging"
-#   tlsIssuerKind: "Issuer"
-#
-#   image:
-#     repository: ghcr.io/hazelchat/hazel-web
-#     tag: "1.0.1"
-#     pullPolicy: IfNotPresent
-#     pullSecrets: []
 
 botgateway:
   localRoutes: ["/"]
