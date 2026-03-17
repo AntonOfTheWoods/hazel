@@ -95,6 +95,28 @@ hazel:
 ## Generic app templates contract
 ##
 apps:
+  ## Generic resource ownership matrix.
+  ##
+  ## Each list controls which app keys render that resource from templates/hazel/app/*.
+  ## If an app key is absent from a list, that specific resource kind is NOT rendered
+  ## for that app by generic templates (useful when replacing that kind with bespoke templates).
+  ##
+  ## @param apps.generic.deployment App keys rendered by generic Deployment template
+  ## @param apps.generic.service App keys rendered by generic Service template
+  ## @param apps.generic.hpa App keys rendered by generic HPA template
+  ## @param apps.generic.networkPolicy App keys rendered by generic NetworkPolicy template
+  ## @param apps.generic.pdb App keys rendered by generic PodDisruptionBudget template
+  ## @param apps.generic.vpa App keys rendered by generic VerticalPodAutoscaler template
+  ##
+  ## Example (mixed generic + bespoke):
+  ## generic:
+  ##   deployment: [web, cluster, docs]      # botgateway deployment is bespoke
+  ##   service: [web, cluster, docs]         # botgateway service is bespoke
+  ##   hpa: [web, cluster, docs, botgateway] # but botgateway still uses generic HPA
+  ##   networkPolicy: [web, cluster, docs, botgateway]
+  ##   pdb: [web, cluster, docs, botgateway]
+  ##   vpa: [web, cluster, docs, botgateway]
+  ##
   generic:
     deployment: [web, cluster, docs, botgateway]
     service: [web, cluster, docs, botgateway]
@@ -103,12 +125,23 @@ apps:
     pdb: [web, cluster, docs, botgateway]
     vpa: [web, cluster, docs, botgateway]
 
+  ## Validation guardrails for the apps contract.
+  ##
+  ## @param apps.validation.failOnMissingAppConfig Fail template rendering if apps.generic.* references an app key missing in apps.config
+  ## @param apps.validation.failOnUnknownAppInGenericLists Fail template rendering if apps.generic.* contains unknown keys
+  ##
+  ## Recommended for CI: keep both true to catch config drift early.
+  ## Example:
+  ## validation:
+  ##   failOnMissingAppConfig: true
+  ##   failOnUnknownAppInGenericLists: true
+  ##
   validation:
     failOnMissingAppConfig: true
     failOnUnknownAppInGenericLists: true
 
   defaults:
-    ## @param apps.defaults.enabled Enable app by default for keys listed under apps.generic.*
+    ## @param apps.defaults.enabled Enable apps by default for keys listed under apps.generic.*
     ##
     enabled: true
     ## @param apps.defaults.replicaCount Number of replicas to deploy
@@ -189,7 +222,7 @@ apps:
     ##     effect: NoSchedule
     ##
     tolerations: []
-    ## @param apps.defaults.priorityClassName App pods priorityClassName
+    ## @param apps.defaults.priorityClassName Pod priority class name
     ##
     priorityClassName: ""
     ## @param apps.defaults.schedulerName Name of the Kubernetes scheduler (other than default)
@@ -236,7 +269,7 @@ apps:
     ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
     ##
     containerSecurityContext:
-      ## @param apps.defaults.containerSecurityContext.enabled Enable container Security Context
+      ## @param apps.defaults.containerSecurityContext.enabled Enable container security context
       ##
       enabled: true
       ## @param apps.defaults.containerSecurityContext.seLinuxOptions Set SELinux options
@@ -245,29 +278,29 @@ apps:
       ##   level: "s0:c123,c456"
       ##
       seLinuxOptions: {}
-      ## @param apps.defaults.containerSecurityContext.runAsUser Set runAsUser
+      ## @param apps.defaults.containerSecurityContext.runAsUser Set runAsUser for containers
       ##
       runAsUser: 1001
-      ## @param apps.defaults.containerSecurityContext.runAsGroup Set runAsGroup
+      ## @param apps.defaults.containerSecurityContext.runAsGroup Set runAsGroup for containers
       ##
       runAsGroup: 1001
-      ## @param apps.defaults.containerSecurityContext.runAsNonRoot Set runAsNonRoot
+      ## @param apps.defaults.containerSecurityContext.runAsNonRoot Set runAsNonRoot for containers
       ##
       runAsNonRoot: true
-      ## @param apps.defaults.containerSecurityContext.readOnlyRootFilesystem Set readOnlyRootFilesystem
+      ## @param apps.defaults.containerSecurityContext.readOnlyRootFilesystem Set readOnlyRootFilesystem for containers
       ##
       readOnlyRootFilesystem: false
-      ## @param apps.defaults.containerSecurityContext.privileged Set privileged
+      ## @param apps.defaults.containerSecurityContext.privileged Set privileged mode for containers
       ##
       privileged: false
-      ## @param apps.defaults.containerSecurityContext.allowPrivilegeEscalation Set allowPrivilegeEscalation
+      ## @param apps.defaults.containerSecurityContext.allowPrivilegeEscalation Set allowPrivilegeEscalation for containers
       ##
       allowPrivilegeEscalation: false
       ## @param apps.defaults.containerSecurityContext.capabilities.drop List of capabilities to drop
       ##
       capabilities:
         drop: ["ALL"]
-      ## @param apps.defaults.containerSecurityContext.seccompProfile.type Set seccomp profile
+      ## @param apps.defaults.containerSecurityContext.seccompProfile.type Set seccomp profile type
       ##
       seccompProfile:
         type: "RuntimeDefault"
@@ -307,10 +340,10 @@ apps:
     ## @param apps.defaults.terminationGracePeriodSeconds Seconds pods need to terminate gracefully
     ##
     terminationGracePeriodSeconds: ""
-    ## @param apps.defaults.role Default role string exposed via hazel_ROLE env var
+    ## @param apps.defaults.role Default role value exposed via hazel_ROLE env var
     ##
     role: webserver
-    ## @param apps.defaults.portEnvVarName Default port env var name
+    ## @param apps.defaults.portEnvVarName Default port environment variable name
     ##
     portEnvVarName: hazel_WEBSERVER_PORT_NUMBER
     ## @param apps.defaults.containerPorts.http HTTP container port
@@ -326,10 +359,10 @@ apps:
     ##     value: "true"
     ##
     extraEnvVars: []
-    ## @param apps.defaults.extraEnvVarsCM Name of existing ConfigMap containing extra env vars
+    ## @param apps.defaults.extraEnvVarsCM Name of an existing ConfigMap containing extra environment variables
     ##
     extraEnvVarsCM: ""
-    ## @param apps.defaults.extraEnvVarsSecret Name of existing Secret containing extra env vars
+    ## @param apps.defaults.extraEnvVarsSecret Name of an existing Secret containing extra environment variables
     ##
     extraEnvVarsSecret: ""
     ## @param apps.defaults.extraVolumes Optionally specify additional pod volumes
@@ -441,7 +474,7 @@ apps:
     ## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb
     ##
     pdb:
-      ## @param apps.defaults.pdb.create Enable/disable PodDisruptionBudget creation
+      ## @param apps.defaults.pdb.create Enable or disable PodDisruptionBudget creation
       ##
       create: false
       ## @param apps.defaults.pdb.minAvailable Minimum number/percentage of pods that should remain scheduled
@@ -469,7 +502,7 @@ apps:
         ## @param apps.defaults.autoscaling.hpa.targetCPU Target CPU utilization percentage
         ##
         targetCPU: ""
-        ## @param apps.defaults.autoscaling.hpa.targetMemory Target memory utilization percentage
+        ## @param apps.defaults.autoscaling.hpa.targetMemory Target Memory utilization percentage
         ##
         targetMemory: ""
       vpa:
@@ -503,7 +536,7 @@ apps:
         ## VPA update policy
         ##
         updatePolicy:
-          ## @param apps.defaults.autoscaling.vpa.updatePolicy.updateMode VPA update policy mode (Off, Initial, Recreate, Auto)
+          ## @param apps.defaults.autoscaling.vpa.updatePolicy.updateMode VPA update policy mode (Off, Initial, Recreate, or Auto)
           ##
           updateMode: Auto
     ## Service parameters
@@ -522,14 +555,14 @@ apps:
       ##
       nodePorts:
         http: ""
-      ## @param apps.defaults.service.clusterIP Service ClusterIP
+      ## @param apps.defaults.service.clusterIP Service clusterIP
       ## e.g: None
       ##
       clusterIP: ""
-      ## @param apps.defaults.service.loadBalancerIP Service LoadBalancer IP
+      ## @param apps.defaults.service.loadBalancerIP Service loadBalancer IP
       ##
       loadBalancerIP: ""
-      ## @param apps.defaults.service.loadBalancerSourceRanges Service LoadBalancer allowed source ranges
+      ## @param apps.defaults.service.loadBalancerSourceRanges Service loadBalancer allowed source ranges
       ## e.g:
       ## loadBalancerSourceRanges:
       ##   - 10.10.10.0/24
@@ -612,6 +645,52 @@ apps:
       ##
       ingressNSPodMatchLabels: {}
 
+  ## Per-app configuration map.
+  ##
+  ## Every key in this map represents one app/project (for example: web, cluster, docs, botgateway).
+  ## App values are merged over apps.defaults using mergeOverwrite semantics:
+  ## 1) apps.defaults (base)
+  ## 2) apps.config.<appKey> (override)
+  ##
+  ## Only set keys that differ from apps.defaults.
+  ##
+  ## @param apps.config.<appKey>.enabled Enable/disable this app key (after defaults merge)
+  ## @param apps.config.<appKey>.image.repository Container image repository for this app
+  ## @param apps.config.<appKey>.image.tag Container image tag for this app
+  ## @param apps.config.<appKey>.image.pullPolicy Image pull policy for this app
+  ## @param apps.config.<appKey>.role Value for hazel_ROLE env var
+  ## @param apps.config.<appKey>.portEnvVarName Env var name used for HTTP port export
+  ##
+  ## Minimal example for an app key:
+  ## config:
+  ##   myapp:
+  ##     enabled: true
+  ##     image:
+  ##       repository: ghcr.io/hazelchat/hazel-myapp
+  ##       tag: "1.0.1"
+  ##       pullPolicy: IfNotPresent
+  ##
+  ## Typical override example (inherits everything else from apps.defaults):
+  ## config:
+  ##   myapp:
+  ##     role: myapp
+  ##     portEnvVarName: hazel_MYAPP_PORT_NUMBER
+  ##     containerPorts:
+  ##       http: 9000
+  ##     service:
+  ##       type: ClusterIP
+  ##       ports:
+  ##         http: 9000
+  ##     autoscaling:
+  ##       hpa:
+  ##         enabled: true
+  ##         minReplicas: 2
+  ##         maxReplicas: 10
+  ##         targetCPU: 70
+  ##
+  ## If an app needs bespoke templates for specific resource kinds, remove that app key from
+  ## the matching apps.generic.<kind> list and keep this app config for the remaining generic kinds.
+  ##
   config:
     web:
       enabled: true
