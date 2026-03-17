@@ -20,6 +20,8 @@ SPDX-License-Identifier: APACHE-2.0
 {{- $livenessProbe := default (dict) $app.livenessProbe -}}
 {{- $readinessProbe := default (dict) $app.readinessProbe -}}
 {{- $startupProbe := default (dict) $app.startupProbe -}}
+{{- $codeVolume := default (dict) $app.codeVolume -}}
+{{- $codeVolumeImage := default (dict) $codeVolume.image -}}
 ---
 apiVersion: {{ include "common.capabilities.deployment.apiVersion" $root }}
 kind: Deployment
@@ -107,6 +109,9 @@ spec:
         - name: {{ $component }}
           image: {{ include "hazel.app.image" (dict "root" $root "appConfig" $app) }}
           imagePullPolicy: {{ default "IfNotPresent" $image.pullPolicy | quote }}
+          {{- if $app.workingDir }}
+          workingDir: {{ $app.workingDir | quote }}
+          {{- end }}
           {{- if (default false $containerSecurityContext.enabled) }}
           securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" $containerSecurityContext "context" $root) | nindent 12 }}
           {{- end }}
@@ -180,6 +185,11 @@ spec:
             - name: empty-dir
               mountPath: /tmp
               subPath: tmp-dir
+            {{- if $codeVolume.enabled }}
+            - name: {{ default "code" $codeVolume.name }}
+              mountPath: {{ default "/workspace" $codeVolume.mountPath | quote }}
+              readOnly: {{ default true $codeVolume.readOnly }}
+            {{- end }}
             {{- if $root.Values.usePasswordFiles }}
             - name: hazel-secrets
               mountPath: /opt/bitnami/hazel/secrets
@@ -198,6 +208,12 @@ spec:
       volumes:
         - name: empty-dir
           emptyDir: {}
+        {{- if $codeVolume.enabled }}
+        - name: {{ default "code" $codeVolume.name }}
+          image:
+            reference: {{ $codeVolumeImage.reference | quote }}
+            pullPolicy: {{ default "IfNotPresent" $codeVolumeImage.pullPolicy }}
+        {{- end }}
         {{- if $root.Values.usePasswordFiles }}
         - name: hazel-secrets
           projected:

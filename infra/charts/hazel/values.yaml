@@ -118,12 +118,12 @@ apps:
   ##   vpa: [web, cluster, docs, botgateway]
   ##
   generic:
-    deployment: [web, cluster, docs, botgateway]
-    service: [web, cluster, docs, botgateway]
-    hpa: [web, cluster, docs, botgateway]
-    networkPolicy: [web, cluster, docs, botgateway]
-    pdb: [web, cluster, docs, botgateway]
-    vpa: [web, cluster, docs, botgateway]
+    deployment: [actors, backend, bot-gateway, cluster, docs, electric-proxy, landing, link-preview-worker, web]
+    service: [backend, bot-gateway, cluster, docs, electric-proxy, landing, web]
+    hpa: [actors, backend, bot-gateway, cluster, docs, electric-proxy, landing, link-preview-worker, web]
+    networkPolicy: [actors, backend, bot-gateway, cluster, docs, electric-proxy, landing, link-preview-worker, web]
+    pdb: [actors, backend, bot-gateway, cluster, docs, electric-proxy, landing, link-preview-worker, web]
+    vpa: [actors, backend, bot-gateway, cluster, docs, electric-proxy, landing, link-preview-worker, web]
 
   ## Validation guardrails for the apps contract.
   ##
@@ -314,6 +314,11 @@ apps:
     ## args: ["node server.js"]
     ##
     args: []
+    ## @param apps.defaults.workingDir Working directory for the main container
+    ## e.g:
+    ## workingDir: /workspace/apps/myapp
+    ##
+    workingDir: ""
     ## @param apps.defaults.lifecycleHooks Lifecycle hooks for app containers
     ## e.g:
     ## lifecycleHooks:
@@ -346,6 +351,29 @@ apps:
     ## @param apps.defaults.portEnvVarName Default port environment variable name
     ##
     portEnvVarName: hazel_WEBSERVER_PORT_NUMBER
+    ## First-class code volume configuration (OCI image-backed volume)
+    ##
+    codeVolume:
+      ## @param apps.defaults.codeVolume.enabled Enable code volume mount/volume in Deployment
+      ##
+      enabled: false
+      ## @param apps.defaults.codeVolume.name Code volume name
+      ##
+      name: code
+      ## @param apps.defaults.codeVolume.mountPath Mount path for code volume
+      ##
+      mountPath: /workspace
+      ## @param apps.defaults.codeVolume.readOnly Mount code volume read-only
+      ##
+      readOnly: true
+      image:
+        ## @param apps.defaults.codeVolume.image.reference OCI image reference for image volume source
+        ## e.g: ghcr.io/hazelchat/hazel-web-code:latest
+        ##
+        reference: ""
+        ## @param apps.defaults.codeVolume.image.pullPolicy Pull policy for code image volume source
+        ##
+        pullPolicy: IfNotPresent
     ## @param apps.defaults.containerPorts.http HTTP container port
     ##
     containerPorts:
@@ -660,6 +688,7 @@ apps:
   ## @param apps.config.<appKey>.image.pullPolicy Image pull policy for this app
   ## @param apps.config.<appKey>.role Value for hazel_ROLE env var
   ## @param apps.config.<appKey>.portEnvVarName Env var name used for HTTP port export
+  ## @param apps.config.<appKey>.dev Dev-mode overlay applied when hazel.isDev=true
   ##
   ## Minimal example for an app key:
   ## config:
@@ -691,42 +720,195 @@ apps:
   ## If an app needs bespoke templates for specific resource kinds, remove that app key from
   ## the matching apps.generic.<kind> list and keep this app config for the remaining generic kinds.
   ##
+  ## Dev-mode overlay example:
+  ## config:
+  ##   myapp:
+  ##     command: ["bun", "run", "start"]
+  ##     dev:
+  ##       command: ["bun", "run", "dev"]
+  ##       containerPorts:
+  ##         http: 3001
+  ##       codeVolume:
+  ##         image:
+  ##           reference: ghcr.io/hazelchat/hazel-myapp-code:latest
+  ##
   config:
-    web:
+    actors:
       enabled: true
-      role: webserver
-      portEnvVarName: hazel_WEBSERVER_PORT_NUMBER
+      role: actors
+      portEnvVarName: hazel_ACTORS_PORT_NUMBER
       image:
-        repository: ghcr.io/hazelchat/hazel-web
-        tag: "1.0.1"
+        repository: oven/bun
+        tag: 1.3-distroless
         pullPolicy: IfNotPresent
+      workingDir: /workspace/apps/actors
+      command: ["bun", "run", "deploy"]
+      codeVolume:
+        enabled: true
+        image:
+          reference: ghcr.io/hazelchat/hazel-actors-code:latest
+          pullPolicy: IfNotPresent
+      dev:
+        command: ["bun", "run", "dev", "--port=6420"]
+        containerPorts:
+          http: 6420
+
+    backend:
+      enabled: true
+      role: backend
+      portEnvVarName: hazel_BACKEND_PORT_NUMBER
+      image:
+        repository: oven/bun
+        tag: 1.3-distroless
+        pullPolicy: IfNotPresent
+      workingDir: /workspace/apps/backend
+      command: ["bun", "run", "start"]
+      containerPorts:
+        http: 8000
+      service:
+        ports:
+          http: 8000
+      codeVolume:
+        enabled: true
+        image:
+          reference: ghcr.io/hazelchat/hazel-backend-code:latest
+          pullPolicy: IfNotPresent
+
+    bot-gateway:
+      enabled: true
+      role: bot-gateway
+      portEnvVarName: hazel_BOT_GATEWAY_PORT_NUMBER
+      image:
+        repository: oven/bun
+        tag: 1.3-distroless
+        pullPolicy: IfNotPresent
+      workingDir: /workspace/apps/bot-gateway
+      command: ["bun", "run", "start"]
+      codeVolume:
+        enabled: true
+        image:
+          reference: ghcr.io/hazelchat/hazel-bot-gateway-code:latest
+          pullPolicy: IfNotPresent
 
     cluster:
       enabled: true
       role: cluster
       portEnvVarName: hazel_CLUSTER_PORT_NUMBER
       image:
-        repository: ghcr.io/hazelchat/hazel-cluster
-        tag: "1.0.1"
+        repository: oven/bun
+        tag: 1.3-distroless
         pullPolicy: IfNotPresent
+      workingDir: /workspace/apps/cluster
+      command: ["bun", "run", "start"]
+      containerPorts:
+        http: 3020
+      service:
+        ports:
+          http: 3020
+      codeVolume:
+        enabled: true
+        image:
+          reference: ghcr.io/hazelchat/hazel-cluster-code:latest
+          pullPolicy: IfNotPresent
 
     docs:
       enabled: true
       role: docs
       portEnvVarName: hazel_DOCS_PORT_NUMBER
       image:
-        repository: ghcr.io/hazelchat/hazel-docs
-        tag: "1.0.1"
+        repository: caddy
+        tag: 2-alpine
         pullPolicy: IfNotPresent
+      workingDir: /workspace/apps/docs
+      command: ["caddy", "file-server", "--root", "/workspace/apps/docs/.output/public", "--listen", ":3012"]
+      containerPorts:
+        http: 3012
+      service:
+        ports:
+          http: 3012
+      codeVolume:
+        enabled: true
+        image:
+          reference: ghcr.io/hazelchat/hazel-docs-code:latest
+          pullPolicy: IfNotPresent
 
-    botgateway:
+    electric-proxy:
       enabled: true
-      role: botgateway
-      portEnvVarName: hazel_BOTGATEWAY_PORT_NUMBER
+      role: electric-proxy
+      portEnvVarName: hazel_ELECTRIC_PROXY_PORT_NUMBER
       image:
-        repository: ghcr.io/hazelchat/hazel-bot-gateway
-        tag: "1.0.1"
+        repository: oven/bun
+        tag: 1.3-distroless
         pullPolicy: IfNotPresent
+      workingDir: /workspace/apps/electric-proxy
+      command: ["bun", "run", "start"]
+      codeVolume:
+        enabled: true
+        image:
+          reference: ghcr.io/hazelchat/hazel-electric-proxy-code:latest
+          pullPolicy: IfNotPresent
+
+    landing:
+      enabled: true
+      role: landing
+      portEnvVarName: hazel_LANDING_PORT_NUMBER
+      image:
+        repository: caddy
+        tag: 2-alpine
+        pullPolicy: IfNotPresent
+      workingDir: /workspace/apps/landing
+      command: ["caddy", "file-server", "--root", "/workspace/apps/landing/dist", "--listen", ":3008"]
+      containerPorts:
+        http: 3008
+      service:
+        ports:
+          http: 3008
+      codeVolume:
+        enabled: true
+        image:
+          reference: ghcr.io/hazelchat/hazel-landing-code:latest
+          pullPolicy: IfNotPresent
+
+    link-preview-worker:
+      enabled: true
+      role: link-preview-worker
+      portEnvVarName: hazel_LINK_PREVIEW_WORKER_PORT_NUMBER
+      image:
+        repository: oven/bun
+        tag: 1.3-distroless
+        pullPolicy: IfNotPresent
+      workingDir: /workspace/apps/link-preview-worker
+      command: ["bun", "run", "deploy"]
+      codeVolume:
+        enabled: true
+        image:
+          reference: ghcr.io/hazelchat/hazel-link-preview-worker-code:latest
+          pullPolicy: IfNotPresent
+      dev:
+        command: ["bun", "run", "dev:local"]
+        containerPorts:
+          http: 5471
+
+    web:
+      enabled: true
+      role: webserver
+      portEnvVarName: hazel_WEBSERVER_PORT_NUMBER
+      image:
+        repository: caddy
+        tag: 2-alpine
+        pullPolicy: IfNotPresent
+      workingDir: /workspace/apps/web
+      command: ["caddy", "file-server", "--root", "/workspace/apps/web/dist", "--listen", ":3000"]
+      containerPorts:
+        http: 3000
+      service:
+        ports:
+          http: 3000
+      codeVolume:
+        enabled: true
+        image:
+          reference: ghcr.io/hazelchat/hazel-web-code:latest
+          pullPolicy: IfNotPresent
 
 botgateway:
   localRoutes: ["/"]

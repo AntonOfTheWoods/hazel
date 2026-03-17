@@ -110,6 +110,9 @@ Output: YAML map
 {{- end -}}
 {{- $appConfig := default (dict) (index $config $appKey) -}}
 {{- $merged := mergeOverwrite (deepCopy $defaults) $appConfig -}}
+{{- if and (default false $root.Values.hazel.isDev) (hasKey $appConfig "dev") -}}
+{{- $merged = mergeOverwrite (deepCopy $merged) (default (dict) $appConfig.dev) -}}
+{{- end -}}
 {{- toYaml $merged -}}
 {{- end -}}
 
