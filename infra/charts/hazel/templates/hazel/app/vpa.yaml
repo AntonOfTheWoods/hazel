@@ -2,43 +2,53 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if and .Values.web.enabled (include "common.capabilities.apiVersions.has" ( dict "version" "autoscaling.k8s.io/v1/VerticalPodAutoscaler" "context" . )) .Values.web.autoscaling.vpa.enabled }}
+{{- $root := . -}}
+{{- $appKeys := include "hazel.app.keysFor" (dict "root" $root "kind" "vpa") | fromYamlArray -}}
+{{ range $appKey := $appKeys }}
+{{ $app := include "hazel.app.config" (dict "root" $root "appKey" $appKey) | fromYaml -}}
+{{- $autoscaling := default (dict) $app.autoscaling -}}
+{{- $vpa := default (dict) $autoscaling.vpa -}}
+{{ if and (eq (include "hazel.app.enabled" (dict "root" $root "appKey" $appKey) | trim) "true") (include "common.capabilities.apiVersions.has" ( dict "version" "autoscaling.k8s.io/v1/VerticalPodAutoscaler" "context" $root )) (default false $vpa.enabled) }}
+{{- $fullname := include "hazel.app.fullname" (dict "root" $root "appKey" $appKey) -}}
+{{- $component := include "hazel.app.component" (dict "appKey" $appKey) -}}
+---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: {{ template "hazel.web.fullname" . }}
-  namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
-    app.kubernetes.io/component: hazel-web
+  name: {{ $fullname }}
+  namespace: {{ include "common.names.namespace" $root | quote }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" $root.Values.commonLabels "context" $root ) | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
     app.kubernetes.io/part-of: hazel
-  {{- if or .Values.web.autoscaling.vpa.annotations .Values.commonAnnotations }}
-  {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .Values.web.autoscaling.vpa.annotations .Values.commonAnnotations ) "context" . ) }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
+  {{- if or $vpa.annotations $root.Values.commonAnnotations }}
+  {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list $vpa.annotations $root.Values.commonAnnotations ) "context" $root ) }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $root) | nindent 4 }}
   {{- end }}
 spec:
   resourcePolicy:
     containerPolicies:
-    - containerName: hazel-web
-      {{- with .Values.web.autoscaling.vpa.controlledResources }}
+    - containerName: {{ $component }}
+      {{- with $vpa.controlledResources }}
       controlledResources:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.web.autoscaling.vpa.maxAllowed }}
+      {{- with $vpa.maxAllowed }}
       maxAllowed:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.web.autoscaling.vpa.minAllowed }}
+      {{- with $vpa.minAllowed }}
       minAllowed:
         {{- toYaml . | nindent 8 }}
       {{- end }}
   targetRef:
-    apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
+    apiVersion: {{ include "common.capabilities.deployment.apiVersion" $root }}
     kind: "Deployment"
-    name: {{ template "hazel.web.fullname" . }}
-  {{- if .Values.web.autoscaling.vpa.updatePolicy }}
+    name: {{ $fullname }}
+  {{- if $vpa.updatePolicy }}
   updatePolicy:
-    {{- with .Values.web.autoscaling.vpa.updatePolicy.updateMode }}
+    {{- with $vpa.updatePolicy.updateMode }}
     updateMode: {{ . }}
     {{- end }}
   {{- end }}
+{{- end }}
 {{- end }}

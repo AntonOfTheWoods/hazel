@@ -92,6 +92,180 @@ hazel:
     # This will be done automatically if using the kube scripts
     src: true
 
+## Generic app templates contract
+##
+apps:
+  generic:
+    deployment: [web, cluster, docs, botgateway]
+    service: [web, cluster, docs, botgateway]
+    hpa: [web, cluster, docs, botgateway]
+    networkPolicy: [web, cluster, docs, botgateway]
+    pdb: [web, cluster, docs, botgateway]
+    vpa: [web, cluster, docs, botgateway]
+
+  validation:
+    failOnMissingAppConfig: true
+    failOnUnknownAppInGenericLists: true
+
+  defaults:
+    enabled: true
+    replicaCount: 1
+    automountServiceAccountToken: false
+    podLabels: {}
+    podAnnotations: {}
+    podAffinityPreset: ""
+    podAntiAffinityPreset: soft
+    nodeAffinityPreset:
+      type: ""
+      key: ""
+      values: []
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    priorityClassName: ""
+    schedulerName: ""
+    topologySpreadConstraints: []
+    podSecurityContext:
+      enabled: true
+      fsGroupChangePolicy: Always
+      sysctls: []
+      supplementalGroups: []
+      fsGroup: 1001
+    containerSecurityContext:
+      enabled: true
+      seLinuxOptions: {}
+      runAsUser: 1001
+      runAsGroup: 1001
+      runAsNonRoot: true
+      readOnlyRootFilesystem: false
+      privileged: false
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      seccompProfile:
+        type: "RuntimeDefault"
+    command: []
+    args: []
+    lifecycleHooks: {}
+    resourcesPreset: "none"
+    resources: {}
+    terminationGracePeriodSeconds: ""
+    role: webserver
+    portEnvVarName: hazel_WEBSERVER_PORT_NUMBER
+    containerPorts:
+      http: 8080
+    extraEnvVars: []
+    extraEnvVarsCM: ""
+    extraEnvVarsSecret: ""
+    extraVolumes: []
+    extraVolumeMounts: []
+    sidecars: []
+    initContainers: []
+    livenessProbe:
+      enabled: false
+      initialDelaySeconds: 15
+      periodSeconds: 15
+      timeoutSeconds: 1
+      failureThreshold: 3
+      successThreshold: 1
+    readinessProbe:
+      enabled: true
+      initialDelaySeconds: 15
+      periodSeconds: 15
+      timeoutSeconds: 1
+      failureThreshold: 3
+      successThreshold: 1
+    startupProbe:
+      enabled: false
+      initialDelaySeconds: 15
+      periodSeconds: 5
+      timeoutSeconds: 1
+      failureThreshold: 60
+      successThreshold: 1
+    customLivenessProbe: {}
+    customReadinessProbe: {}
+    customStartupProbe: {}
+    pdb:
+      create: false
+      minAvailable: 1
+      maxUnavailable: ""
+    autoscaling:
+      hpa:
+        enabled: false
+        minReplicas: ""
+        maxReplicas: ""
+        targetCPU: ""
+        targetMemory: ""
+      vpa:
+        enabled: false
+        annotations: {}
+        controlledResources: []
+        maxAllowed: {}
+        minAllowed: {}
+        updatePolicy:
+          updateMode: Auto
+    service:
+      type: ClusterIP
+      ports:
+        http: 80
+      nodePorts:
+        http: ""
+      clusterIP: ""
+      loadBalancerIP: ""
+      loadBalancerSourceRanges: []
+      externalTrafficPolicy: Cluster
+      annotations: {}
+      extraPorts: []
+      sessionAffinity: None
+      sessionAffinityConfig: {}
+    networkPolicy:
+      enabled: true
+      allowExternal: true
+      allowExternalEgress: true
+      addExternalClientAccess: true
+      extraIngress: []
+      extraEgress: []
+      ingressPodMatchLabels: {}
+      ingressNSMatchLabels: {}
+      ingressNSPodMatchLabels: {}
+
+  config:
+    web:
+      enabled: true
+      role: webserver
+      portEnvVarName: hazel_WEBSERVER_PORT_NUMBER
+      image:
+        repository: ghcr.io/hazelchat/hazel-web
+        tag: "1.0.1"
+        pullPolicy: IfNotPresent
+
+    cluster:
+      enabled: true
+      role: cluster
+      portEnvVarName: hazel_CLUSTER_PORT_NUMBER
+      image:
+        repository: ghcr.io/hazelchat/hazel-cluster
+        tag: "1.0.1"
+        pullPolicy: IfNotPresent
+
+    docs:
+      enabled: true
+      role: docs
+      portEnvVarName: hazel_DOCS_PORT_NUMBER
+      image:
+        repository: ghcr.io/hazelchat/hazel-docs
+        tag: "1.0.1"
+        pullPolicy: IfNotPresent
+
+    botgateway:
+      enabled: true
+      role: botgateway
+      portEnvVarName: hazel_BOTGATEWAY_PORT_NUMBER
+      image:
+        repository: ghcr.io/hazelchat/hazel-bot-gateway
+        tag: "1.0.1"
+        pullPolicy: IfNotPresent
+
 ## hazel Webserver
 ##
 web:

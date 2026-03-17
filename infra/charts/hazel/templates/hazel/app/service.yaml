@@ -2,54 +2,65 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if .Values.web.enabled }}
+{{- $root := . -}}
+{{- $appKeys := include "hazel.app.keysFor" (dict "root" $root "kind" "service") | fromYamlArray -}}
+{{ range $appKey := $appKeys }}
+{{ $app := include "hazel.app.config" (dict "root" $root "appKey" $appKey) | fromYaml -}}
+{{- $service := default (dict) $app.service -}}
+{{- $servicePorts := default (dict) $service.ports -}}
+{{- $serviceNodePorts := default (dict) $service.nodePorts -}}
+{{ if eq (include "hazel.app.enabled" (dict "root" $root "appKey" $appKey) | trim) "true" }}
+{{- $fullname := include "hazel.app.fullname" (dict "root" $root "appKey" $appKey) -}}
+{{- $component := include "hazel.app.component" (dict "appKey" $appKey) -}}
+---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ template "hazel.web.fullname" . }}
-  namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
-    app.kubernetes.io/component: hazel-web
+  name: {{ $fullname }}
+  namespace: {{ include "common.names.namespace" $root | quote }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" $root.Values.commonLabels "context" $root ) | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
     app.kubernetes.io/part-of: hazel
-  {{- if or .Values.web.service.annotations .Values.commonAnnotations }}
-  {{- $annotations := include "common.tplvalues.merge" (dict "values" (list .Values.web.service.annotations .Values.commonAnnotations) "context" .) }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
+  {{- if or $service.annotations $root.Values.commonAnnotations }}
+  {{- $annotations := include "common.tplvalues.merge" (dict "values" (list $service.annotations $root.Values.commonAnnotations) "context" $root) }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $root ) | nindent 4 }}
   {{- end }}
 spec:
-  type: {{ .Values.web.service.type }}
-  {{- if and .Values.web.service.clusterIP (eq .Values.web.service.type "ClusterIP") }}
-  clusterIP: {{ .Values.web.service.clusterIP }}
+  type: {{ default "ClusterIP" $service.type }}
+  {{- if and $service.clusterIP (eq (default "ClusterIP" $service.type) "ClusterIP") }}
+  clusterIP: {{ $service.clusterIP }}
   {{- end }}
-  {{- if .Values.web.service.sessionAffinity }}
-  sessionAffinity: {{ .Values.web.service.sessionAffinity }}
+  {{- if $service.sessionAffinity }}
+  sessionAffinity: {{ $service.sessionAffinity }}
   {{- end }}
-  {{- if .Values.web.service.sessionAffinityConfig }}
-  sessionAffinityConfig: {{- include "common.tplvalues.render" (dict "value" .Values.web.service.sessionAffinityConfig "context" $) | nindent 4 }}
+  {{- if $service.sessionAffinityConfig }}
+  sessionAffinityConfig: {{- include "common.tplvalues.render" (dict "value" $service.sessionAffinityConfig "context" $root) | nindent 4 }}
   {{- end }}
-  {{- if or (eq .Values.web.service.type "LoadBalancer") (eq .Values.web.service.type "NodePort") }}
-  externalTrafficPolicy: {{ .Values.web.service.externalTrafficPolicy | quote }}
+  {{- if or (eq (default "ClusterIP" $service.type) "LoadBalancer") (eq (default "ClusterIP" $service.type) "NodePort") }}
+  externalTrafficPolicy: {{ default "Cluster" $service.externalTrafficPolicy | quote }}
   {{- end }}
-  {{- if and (eq .Values.web.service.type "LoadBalancer") (not (empty .Values.web.service.loadBalancerSourceRanges)) }}
-  loadBalancerSourceRanges: {{ .Values.web.service.loadBalancerSourceRanges }}
+  {{- if and (eq (default "ClusterIP" $service.type) "LoadBalancer") (not (empty $service.loadBalancerSourceRanges)) }}
+  loadBalancerSourceRanges: {{ $service.loadBalancerSourceRanges }}
   {{- end }}
-  {{- if and (eq .Values.web.service.type "LoadBalancer") (not (empty .Values.web.service.loadBalancerIP)) }}
-  loadBalancerIP: {{ .Values.web.service.loadBalancerIP }}
+  {{- if and (eq (default "ClusterIP" $service.type) "LoadBalancer") (not (empty $service.loadBalancerIP)) }}
+  loadBalancerIP: {{ $service.loadBalancerIP }}
   {{- end }}
   ports:
     - name: http
-      port: {{ .Values.web.service.ports.http }}
+      port: {{ default 80 $servicePorts.http }}
       targetPort: http
       protocol: TCP
-      {{- if and (or (eq .Values.web.service.type "NodePort") (eq .Values.web.service.type "LoadBalancer")) (not (empty .Values.web.service.nodePorts.http)) }}
-      nodePort: {{ .Values.web.service.nodePorts.http }}
-      {{- else if eq .Values.web.service.type "ClusterIP" }}
+      {{- if and (or (eq (default "ClusterIP" $service.type) "NodePort") (eq (default "ClusterIP" $service.type) "LoadBalancer")) (not (empty $serviceNodePorts.http)) }}
+      nodePort: {{ $serviceNodePorts.http }}
+      {{- else if eq (default "ClusterIP" $service.type) "ClusterIP" }}
       nodePort: null
       {{- end }}
-    {{- if .Values.web.service.extraPorts }}
-    {{- include "common.tplvalues.render" (dict "value" .Values.web.service.extraPorts "context" $) | nindent 4 }}
+    {{- if $service.extraPorts }}
+    {{- include "common.tplvalues.render" (dict "value" $service.extraPorts "context" $root) | nindent 4 }}
     {{- end }}
-  {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list .Values.web.podLabels .Values.commonLabels) "context" .) | fromYaml }}
-  selector: {{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 4 }}
-    app.kubernetes.io/component: hazel-web
+  {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list $app.podLabels $root.Values.commonLabels) "context" $root) | fromYaml }}
+  selector: {{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $root ) | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
     app.kubernetes.io/part-of: hazel
+{{- end }}
 {{- end }}

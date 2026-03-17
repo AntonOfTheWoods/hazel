@@ -2,28 +2,37 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if and .Values.web.enabled .Values.web.pdb.create }}
-apiVersion: {{ include "common.capabilities.policy.apiVersion" . }}
+{{- $root := . -}}
+{{- $appKeys := include "hazel.app.keysFor" (dict "root" $root "kind" "pdb") | fromYamlArray -}}
+{{ range $appKey := $appKeys }}
+{{ $app := include "hazel.app.config" (dict "root" $root "appKey" $appKey) | fromYaml -}}
+{{- $pdb := default (dict) $app.pdb -}}
+{{ if and (eq (include "hazel.app.enabled" (dict "root" $root "appKey" $appKey) | trim) "true") (default false $pdb.create) }}
+{{- $fullname := include "hazel.app.fullname" (dict "root" $root "appKey" $appKey) -}}
+{{- $component := include "hazel.app.component" (dict "appKey" $appKey) -}}
+---
+apiVersion: {{ include "common.capabilities.policy.apiVersion" $root }}
 kind: PodDisruptionBudget
 metadata:
-  name: {{ template "hazel.web.fullname" . }}
-  namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
-    app.kubernetes.io/component: hazel-web
+  name: {{ $fullname }}
+  namespace: {{ include "common.names.namespace" $root | quote }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" $root.Values.commonLabels "context" $root ) | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
     app.kubernetes.io/part-of: hazel
-  {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- if $root.Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $root.Values.commonAnnotations "context" $root ) | nindent 4 }}
   {{- end }}
 spec:
-  {{- if .Values.web.pdb.minAvailable }}
-  minAvailable: {{ .Values.web.pdb.minAvailable }}
+  {{- if $pdb.minAvailable }}
+  minAvailable: {{ $pdb.minAvailable }}
   {{- end  }}
-  {{- if or .Values.web.pdb.maxUnavailable ( not .Values.web.pdb.minAvailable ) }}
-  maxUnavailable: {{ .Values.web.pdb.maxUnavailable | default 1 }}
+  {{- if or $pdb.maxUnavailable ( not $pdb.minAvailable ) }}
+  maxUnavailable: {{ $pdb.maxUnavailable | default 1 }}
   {{- end  }}
-  {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list .Values.web.podLabels .Values.commonLabels) "context" .) }}
+  {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list $app.podLabels $root.Values.commonLabels) "context" $root) }}
   selector:
-    matchLabels: {{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
-      app.kubernetes.io/component: hazel-web
+    matchLabels: {{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $root ) | nindent 6 }}
+      app.kubernetes.io/component: {{ $component }}
       app.kubernetes.io/part-of: hazel
+{{- end }}
 {{- end }}

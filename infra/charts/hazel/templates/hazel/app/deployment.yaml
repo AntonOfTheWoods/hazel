@@ -2,206 +2,225 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if .Values.web.enabled }}
-apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
+{{- $root := . -}}
+{{- $appKeys := include "hazel.app.keysFor" (dict "root" $root "kind" "deployment") | fromYamlArray -}}
+{{ range $appKey := $appKeys }}
+{{ $app := include "hazel.app.config" (dict "root" $root "appKey" $appKey) | fromYaml -}}
+{{ if eq (include "hazel.app.enabled" (dict "root" $root "appKey" $appKey) | trim) "true" }}
+{{- $fullname := include "hazel.app.fullname" (dict "root" $root "appKey" $appKey) -}}
+{{- $component := include "hazel.app.component" (dict "appKey" $appKey) -}}
+{{- $autoscaling := default (dict) $app.autoscaling -}}
+{{- $hpa := default (dict) $autoscaling.hpa -}}
+{{- $vpa := default (dict) $autoscaling.vpa -}}
+{{- $nodeAffinityPreset := default (dict) $app.nodeAffinityPreset -}}
+{{- $podSecurityContext := default (dict) $app.podSecurityContext -}}
+{{- $containerSecurityContext := default (dict) $app.containerSecurityContext -}}
+{{- $image := default (dict) $app.image -}}
+{{- $containerPorts := default (dict) $app.containerPorts -}}
+{{- $livenessProbe := default (dict) $app.livenessProbe -}}
+{{- $readinessProbe := default (dict) $app.readinessProbe -}}
+{{- $startupProbe := default (dict) $app.startupProbe -}}
+---
+apiVersion: {{ include "common.capabilities.deployment.apiVersion" $root }}
 kind: Deployment
 metadata:
-  name: {{ template "hazel.web.fullname" . }}
-  namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
-    app.kubernetes.io/component: hazel-web
+  name: {{ $fullname }}
+  namespace: {{ include "common.names.namespace" $root | quote }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" $root.Values.commonLabels "context" $root ) | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
     app.kubernetes.io/part-of: hazel
-  {{- if or .Values.web.deploymentAnnotations .Values.commonAnnotations }}
-  {{- $annotations := include "common.tplvalues.merge" (dict "values" (list .Values.web.deploymentAnnotations .Values.commonAnnotations) "context" .) }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
+  {{- if or $app.deploymentAnnotations $root.Values.commonAnnotations }}
+  {{- $annotations := include "common.tplvalues.merge" (dict "values" (list $app.deploymentAnnotations $root.Values.commonAnnotations) "context" $root) }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $root ) | nindent 4 }}
   {{- end }}
 spec:
-  {{- if and (not .Values.web.autoscaling.hpa.enabled) (not .Values.web.autoscaling.vpa.enabled) }}
-  replicas: {{ .Values.web.replicaCount }}
+  {{- if and (not (default false $hpa.enabled)) (not (default false $vpa.enabled)) }}
+  replicas: {{ $app.replicaCount }}
   {{- end }}
-  {{- if .Values.web.updateStrategy }}
-  strategy: {{- toYaml .Values.web.updateStrategy | nindent 4 }}
+  {{- if $app.updateStrategy }}
+  strategy: {{- toYaml $app.updateStrategy | nindent 4 }}
   {{- end }}
-  {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list .Values.web.podLabels .Values.commonLabels) "context" .) }}
+  {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list $app.podLabels $root.Values.commonLabels) "context" $root) }}
   selector:
-    matchLabels: {{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
-      app.kubernetes.io/component: hazel-web
+    matchLabels: {{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $root ) | nindent 6 }}
+      app.kubernetes.io/component: {{ $component }}
       app.kubernetes.io/part-of: hazel
   template:
     metadata:
-      {{- if .Values.web.podAnnotations }}
-      annotations: {{- include "common.tplvalues.render" (dict "value" .Values.web.podAnnotations "context" $) | nindent 8 }}
+      {{- if $app.podAnnotations }}
+      annotations: {{- include "common.tplvalues.render" (dict "value" $app.podAnnotations "context" $root) | nindent 8 }}
       {{- end }}
-      labels: {{- include "common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
-        app.kubernetes.io/component: hazel-web
+      labels: {{- include "common.labels.standard" ( dict "customLabels" $podLabels "context" $root ) | nindent 8 }}
+        app.kubernetes.io/component: {{ $component }}
         app.kubernetes.io/part-of: hazel
     spec:
 
       {{/*
-      {{- include "hazel.imagePullSecrets" . | nindent 6 }}
+      {{- include "hazel.imagePullSecrets" $root | nindent 6 }}
       */}}
 
-      serviceAccountName: {{ template "hazel.serviceAccountName" . }}
-      automountServiceAccountToken: {{ .Values.web.automountServiceAccountToken }}
-      {{- if .Values.web.hostAliases }}
-      hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.web.hostAliases "context" $) | nindent 8 }}
+      serviceAccountName: {{ template "hazel.serviceAccountName" $root }}
+      automountServiceAccountToken: {{ $app.automountServiceAccountToken }}
+      {{- if $app.hostAliases }}
+      hostAliases: {{- include "common.tplvalues.render" (dict "value" $app.hostAliases "context" $root) | nindent 8 }}
       {{- end }}
-      {{- if .Values.web.affinity }}
-      affinity: {{- include "common.tplvalues.render" ( dict "value" .Values.web.affinity "context" $) | nindent 8 }}
+      {{- if $app.affinity }}
+      affinity: {{- include "common.tplvalues.render" ( dict "value" $app.affinity "context" $root) | nindent 8 }}
       {{- else }}
       affinity:
-        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.web.podAffinityPreset "component" "hazel-web" "customLabels" $podLabels "context" $) | nindent 10 }}
-        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.web.podAntiAffinityPreset "component" "hazel-web" "customLabels" $podLabels "context" $) | nindent 10 }}
-        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.web.nodeAffinityPreset.type "key" .Values.web.nodeAffinityPreset.key "values" .Values.web.nodeAffinityPreset.values) | nindent 10 }}
+        podAffinity: {{- include "common.affinities.pods" (dict "type" $app.podAffinityPreset "component" $component "customLabels" $podLabels "context" $root) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" $app.podAntiAffinityPreset "component" $component "customLabels" $podLabels "context" $root) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" $nodeAffinityPreset.type "key" $nodeAffinityPreset.key "values" $nodeAffinityPreset.values) | nindent 10 }}
       {{- end }}
-      {{- if .Values.web.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" ( dict "value" .Values.web.nodeSelector "context" $) | nindent 8 }}
+      {{- if $app.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" ( dict "value" $app.nodeSelector "context" $root) | nindent 8 }}
       {{- end }}
-      {{- if .Values.web.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.web.tolerations "context" .) | nindent 8 }}
+      {{- if $app.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" $app.tolerations "context" $root) | nindent 8 }}
       {{- end }}
-      {{- if .Values.web.priorityClassName }}
-      priorityClassName: {{ .Values.web.priorityClassName | quote }}
+      {{- if $app.priorityClassName }}
+      priorityClassName: {{ $app.priorityClassName | quote }}
       {{- end }}
-      {{- if .Values.web.schedulerName }}
-      schedulerName: {{ .Values.web.schedulerName | quote }}
+      {{- if $app.schedulerName }}
+      schedulerName: {{ $app.schedulerName | quote }}
       {{- end }}
-      {{- if .Values.web.topologySpreadConstraints }}
-      topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.web.topologySpreadConstraints "context" .) | nindent 8 }}
+      {{- if $app.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" $app.topologySpreadConstraints "context" $root) | nindent 8 }}
       {{- end }}
-      {{- if .Values.web.podSecurityContext.enabled }}
-      securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.web.podSecurityContext "context" $) | nindent 8 }}
+      {{- if (default false $podSecurityContext.enabled) }}
+      securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" $podSecurityContext "context" $root) | nindent 8 }}
       {{- end }}
-      {{- if .Values.web.terminationGracePeriodSeconds }}
-      terminationGracePeriodSeconds: {{ .Values.web.terminationGracePeriodSeconds }}
+      {{- if $app.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ $app.terminationGracePeriodSeconds }}
       {{- end }}
       initContainers:
-        {{- if .Values.defaultInitContainers.waitForDB.enabled }}
-        {{- include "hazel.initContainers.waitForDB" . | nindent 8 }}
+        {{- if $root.Values.defaultInitContainers.waitForDB.enabled }}
+        {{- include "hazel.initContainers.waitForDB" $root | nindent 8 }}
         {{- end }}
-        {{- if .Values.defaultInitContainers.waitForKV.enabled }}
-        {{- include "hazel.initContainers.waitForKV" . | nindent 8 }}
+        {{- if $root.Values.defaultInitContainers.waitForKV.enabled }}
+        {{- include "hazel.initContainers.waitForKV" $root | nindent 8 }}
         {{- end }}
-        {{- if .Values.web.initContainers }}
-        {{- include "common.tplvalues.render" (dict "value" .Values.web.initContainers "context" $) | nindent 8 }}
+        {{- if $app.initContainers }}
+        {{- include "common.tplvalues.render" (dict "value" $app.initContainers "context" $root) | nindent 8 }}
         {{- end }}
       containers:
-        - name: hazel-web
-          image: {{ template "hazel.web.image" . }}
-          imagePullPolicy: {{ .Values.web.image.pullPolicy | quote }}
-          {{- if .Values.web.containerSecurityContext.enabled }}
-          securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.web.containerSecurityContext "context" $) | nindent 12 }}
+        - name: {{ $component }}
+          image: {{ include "hazel.app.image" (dict "root" $root "appConfig" $app) }}
+          imagePullPolicy: {{ default "IfNotPresent" $image.pullPolicy | quote }}
+          {{- if (default false $containerSecurityContext.enabled) }}
+          securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" $containerSecurityContext "context" $root) | nindent 12 }}
           {{- end }}
-          {{- if .Values.diagnosticMode.enabled }}
-          command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
-          {{- else if .Values.web.command }}
-          command: {{- include "common.tplvalues.render" (dict "value" .Values.web.command "context" $) | nindent 12 }}
+          {{- if $root.Values.diagnosticMode.enabled }}
+          command: {{- include "common.tplvalues.render" (dict "value" $root.Values.diagnosticMode.command "context" $root) | nindent 12 }}
+          {{- else if $app.command }}
+          command: {{- include "common.tplvalues.render" (dict "value" $app.command "context" $root) | nindent 12 }}
           {{- end }}
-          {{- if .Values.diagnosticMode.enabled }}
-          args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
-          {{- else if .Values.web.args }}
-          args: {{- include "common.tplvalues.render" (dict "value" .Values.web.args "context" $) | nindent 12 }}
+          {{- if $root.Values.diagnosticMode.enabled }}
+          args: {{- include "common.tplvalues.render" (dict "value" $root.Values.diagnosticMode.args "context" $root) | nindent 12 }}
+          {{- else if $app.args }}
+          args: {{- include "common.tplvalues.render" (dict "value" $app.args "context" $root) | nindent 12 }}
           {{- end }}
           env:
-            {{- include "hazel.configure.common" . | nindent 12 }}
-            {{- include "hazel.configure.database" . | nindent 12 }}
-            {{- include "hazel.configure.kv" . | nindent 12 }}
+            {{- include "hazel.configure.common" $root | nindent 12 }}
+            {{- include "hazel.configure.database" $root | nindent 12 }}
+            {{- include "hazel.configure.kv" $root | nindent 12 }}
             - name: hazel_ROLE
-              value: "webserver"
-            - name: hazel_WEBSERVER_PORT_NUMBER
-              value: {{ .Values.web.containerPorts.http | quote }}
-            {{- if .Values.web.extraEnvVars }}
-            {{- include "common.tplvalues.render" (dict "value" .Values.web.extraEnvVars "context" $) | nindent 12 }}
+              value: {{ default "webserver" $app.role | quote }}
+            - name: {{ default "hazel_WEBSERVER_PORT_NUMBER" $app.portEnvVarName | quote }}
+              value: {{ default 8080 $containerPorts.http | quote }}
+            {{- if $app.extraEnvVars }}
+            {{- include "common.tplvalues.render" (dict "value" $app.extraEnvVars "context" $root) | nindent 12 }}
             {{- end }}
           envFrom:
-            {{- if .Values.web.extraEnvVarsCM }}
+            {{- if $app.extraEnvVarsCM }}
             - configMapRef:
-                name: {{ include "common.tplvalues.render" (dict "value" .Values.web.extraEnvVarsCM "context" $) }}
+                name: {{ include "common.tplvalues.render" (dict "value" $app.extraEnvVarsCM "context" $root) }}
             {{- end }}
-            {{- if .Values.web.extraEnvVarsSecret }}
+            {{- if $app.extraEnvVarsSecret }}
             - secretRef:
-                name: {{ include "common.tplvalues.render" (dict "value" .Values.web.extraEnvVarsSecret "context" $) }}
+                name: {{ include "common.tplvalues.render" (dict "value" $app.extraEnvVarsSecret "context" $root) }}
             {{- end }}
-          {{- if .Values.web.resources }}
-          resources: {{- toYaml .Values.web.resources | nindent 12 }}
-          {{- else if ne .Values.web.resourcesPreset "none" }}
-          resources: {{- include "common.resources.preset" (dict "type" .Values.web.resourcesPreset) | nindent 12 }}
+          {{- if $app.resources }}
+          resources: {{- toYaml $app.resources | nindent 12 }}
+          {{- else if ne $app.resourcesPreset "none" }}
+          resources: {{- include "common.resources.preset" (dict "type" $app.resourcesPreset) | nindent 12 }}
           {{- end }}
           ports:
             - name: http
-              containerPort: {{ .Values.web.containerPorts.http }}
-          {{- if not .Values.diagnosticMode.enabled }}
-          {{- if .Values.web.customLivenessProbe }}
-          livenessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.web.customLivenessProbe "context" $) | nindent 12 }}
-          {{- else if .Values.web.livenessProbe.enabled }}
-          livenessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.web.livenessProbe "enabled") "context" $) | nindent 12 }}
+              containerPort: {{ default 8080 $containerPorts.http }}
+          {{- if not $root.Values.diagnosticMode.enabled }}
+          {{- if $app.customLivenessProbe }}
+          livenessProbe: {{- include "common.tplvalues.render" (dict "value" $app.customLivenessProbe "context" $root) | nindent 12 }}
+          {{- else if (default false $livenessProbe.enabled) }}
+          livenessProbe: {{- include "common.tplvalues.render" (dict "value" (omit $livenessProbe "enabled") "context" $root) | nindent 12 }}
             tcpSocket:
               port: http
           {{- end }}
-          {{- if .Values.web.customReadinessProbe }}
-          readinessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.web.customReadinessProbe "context" $) | nindent 12 }}
-          {{- else if .Values.web.readinessProbe.enabled }}
-          readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.web.readinessProbe "enabled") "context" $) | nindent 12 }}
+          {{- if $app.customReadinessProbe }}
+          readinessProbe: {{- include "common.tplvalues.render" (dict "value" $app.customReadinessProbe "context" $root) | nindent 12 }}
+          {{- else if (default false $readinessProbe.enabled) }}
+          readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit $readinessProbe "enabled") "context" $root) | nindent 12 }}
             httpGet:
               path: /health
               port: http
           {{- end }}
-          {{- if .Values.web.customStartupProbe }}
-          startupProbe: {{- include "common.tplvalues.render" (dict "value" .Values.web.customStartupProbe "context" $) | nindent 12 }}
-          {{- else if .Values.web.startupProbe.enabled }}
-          startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.web.startupProbe "enabled") "context" $) | nindent 12 }}
+          {{- if $app.customStartupProbe }}
+          startupProbe: {{- include "common.tplvalues.render" (dict "value" $app.customStartupProbe "context" $root) | nindent 12 }}
+          {{- else if (default false $startupProbe.enabled) }}
+          startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit $startupProbe "enabled") "context" $root) | nindent 12 }}
             httpGet:
               path: /health
               port: http
           {{- end }}
           {{- end }}
-          {{- if .Values.web.lifecycleHooks }}
-          lifecycle: {{- include "common.tplvalues.render" (dict "value" .Values.web.lifecycleHooks "context" $) | nindent 12 }}
+          {{- if $app.lifecycleHooks }}
+          lifecycle: {{- include "common.tplvalues.render" (dict "value" $app.lifecycleHooks "context" $root) | nindent 12 }}
           {{- end }}
           volumeMounts:
             - name: empty-dir
               mountPath: /tmp
               subPath: tmp-dir
-            {{- if .Values.usePasswordFiles }}
+            {{- if $root.Values.usePasswordFiles }}
             - name: hazel-secrets
               mountPath: /opt/bitnami/hazel/secrets
               readOnly: true
             {{- end }}
-            {{- if or .Values.existingConfigmap .Values.config }}
+            {{- if or $root.Values.existingConfigmap $root.Values.config }}
             - name: hazel-config
               mountPath: /bitnami/hazel/conf
             {{- end }}
-          {{- if .Values.web.extraVolumeMounts }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.web.extraVolumeMounts "context" $) | nindent 12 }}
+          {{- if $app.extraVolumeMounts }}
+          {{- include "common.tplvalues.render" (dict "value" $app.extraVolumeMounts "context" $root) | nindent 12 }}
           {{- end }}
-        {{- if .Values.web.sidecars }}
-        {{- include "common.tplvalues.render" ( dict "value" .Values.web.sidecars "context" $) | nindent 8 }}
+        {{- if $app.sidecars }}
+        {{- include "common.tplvalues.render" ( dict "value" $app.sidecars "context" $root) | nindent 8 }}
         {{- end }}
       volumes:
         - name: empty-dir
           emptyDir: {}
-        {{- if .Values.usePasswordFiles }}
+        {{- if $root.Values.usePasswordFiles }}
         - name: hazel-secrets
           projected:
             sources:
               - secret:
-                  name: {{ include "hazel.secretName" . }}
+                  name: {{ include "hazel.secretName" $root }}
                   items:
                     - key: hazel-secret-key
                       path: hazel-secret-key
               - secret:
-                  name: {{ include "hazel.redis.secretName" . }}
-              {{- if or (not .Values.postgresql.enabled) .Values.postgresql.auth.enablePostgresUser }}
+                  name: {{ include "hazel.redis.secretName" $root }}
+              {{- if or (not $root.Values.postgresql.enabled) $root.Values.postgresql.auth.enablePostgresUser }}
               - secret:
-                  name: {{ include "hazel.postgresql.secretName" . }}
+                  name: {{ include "hazel.postgresql.secretName" $root }}
               {{- end }}
         {{- end }}
-        {{- if or .Values.existingConfigmap .Values.config }}
+        {{- if or $root.Values.existingConfigmap $root.Values.config }}
         - name: hazel-config
           configMap:
-            name: {{ include "hazel.configMapName" . }}
+            name: {{ include "hazel.configMapName" $root }}
         {{- end }}
-        {{- if .Values.web.extraVolumes }}
-        {{- include "common.tplvalues.render" (dict "value" .Values.web.extraVolumes "context" $) | nindent 8 }}
+        {{- if $app.extraVolumes }}
+        {{- include "common.tplvalues.render" (dict "value" $app.extraVolumes "context" $root) | nindent 8 }}
         {{- end }}
+{{- end }}
 {{- end }}

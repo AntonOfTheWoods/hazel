@@ -2,40 +2,50 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if and .Values.web.enabled .Values.web.autoscaling.hpa.enabled }}
-apiVersion: {{ include "common.capabilities.hpa.apiVersion" . }}
+{{- $root := . -}}
+{{- $appKeys := include "hazel.app.keysFor" (dict "root" $root "kind" "hpa") | fromYamlArray -}}
+{{ range $appKey := $appKeys }}
+{{ $app := include "hazel.app.config" (dict "root" $root "appKey" $appKey) | fromYaml -}}
+{{- $autoscaling := default (dict) $app.autoscaling -}}
+{{- $hpa := default (dict) $autoscaling.hpa -}}
+{{ if and (eq (include "hazel.app.enabled" (dict "root" $root "appKey" $appKey) | trim) "true") (default false $hpa.enabled) }}
+{{- $fullname := include "hazel.app.fullname" (dict "root" $root "appKey" $appKey) -}}
+{{- $component := include "hazel.app.component" (dict "appKey" $appKey) -}}
+---
+apiVersion: {{ include "common.capabilities.hpa.apiVersion" $root }}
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ template "hazel.web.fullname" . }}
-  namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
-    app.kubernetes.io/component: hazel-web
+  name: {{ $fullname }}
+  namespace: {{ include "common.names.namespace" $root | quote }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" $root.Values.commonLabels "context" $root ) | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
     app.kubernetes.io/part-of: hazel
-  {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- if $root.Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $root.Values.commonAnnotations "context" $root ) | nindent 4 }}
   {{- end }}
 spec:
   scaleTargetRef:
-    apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
+    apiVersion: {{ include "common.capabilities.deployment.apiVersion" $root }}
     kind: Deployment
-    name: {{ template "hazel.web.fullname" . }}
-  minReplicas: {{ .Values.web.autoscaling.hpa.minReplicas }}
-  maxReplicas: {{ .Values.web.autoscaling.hpa.maxReplicas }}
+    name: {{ $fullname }}
+  minReplicas: {{ $hpa.minReplicas }}
+  maxReplicas: {{ $hpa.maxReplicas }}
   metrics:
-    {{- if .Values.web.autoscaling.hpa.targetMemory }}
+    {{- if $hpa.targetMemory }}
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: {{ .Values.web.autoscaling.hpa.targetMemory }}
+          averageUtilization: {{ $hpa.targetMemory }}
     {{- end }}
-    {{- if .Values.web.autoscaling.hpa.targetCPU }}
+    {{- if $hpa.targetCPU }}
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ .Values.web.autoscaling.hpa.targetCPU }}
+          averageUtilization: {{ $hpa.targetCPU }}
     {{- end }}
+{{- end }}
 {{- end }}
